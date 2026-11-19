@@ -114,11 +114,13 @@ TS_EXTRA_ARGS=--advertise-tags=tag:container
 docker compose up -d
 ```
 
-The `ts-curatarr` container will join your Tailnet with hostname `curatarr`. Within a few seconds, you can access Curatarr at:
+The `ts-curatarr` container will join your Tailnet with hostname `curatarr`. Within a few seconds, you can access Curatarr over Tailscale HTTPS at:
 
-**`http://curatarr`**
+**`https://curatarr.<your-tailnet-name>.ts.net`**
 
-from any device connected to your Tailscale network (laptop, phone, tablet).
+from any device connected to your Tailscale network (laptop, phone, tablet). Set `FRONTEND_BASE_URL` to the same HTTPS URL so invite and password-reset links are reachable.
+
+For public hostname installs, see the [TLS / reverse proxy guide](.project_documents/TLS-REVERSE-PROXY.md) for Caddy, nginx, and Traefik options. Curatarr itself stays HTTP behind the proxy.
 
 ---
 

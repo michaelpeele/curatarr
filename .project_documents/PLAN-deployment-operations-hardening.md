@@ -1,6 +1,6 @@
 # Plan — Deployment and operations hardening (Group D)
 
-**Status: APPROVED SEQUENCE (2026-11-19); V1 release bundle DONE (2026-11-19).** D0 is COMPLETE: the source is published at `https://github.com/michaelpeele/curatarr` (initial commit `8cc8cd3 Initial import of Curatarr`, `main` pushed and tracking `origin/main`). D1 (local ops basics) is DONE and promoted at 2026-11-19T01:52:03Z. D3 (registry and multi-arch CI) is DONE: commit `d9ad777` added the GHCR workflow, the manual run `44442469640` succeeded, and both image manifests were verified for `linux/amd64` and `linux/arm64`. The V1 release bundle is DONE: commit `0c28d00` added `docker-compose.release.yml`, the `v1.0.0` tag was pushed, workflow run `44449305935` succeeded, and both GHCR images were verified at `1.0.0`, `1.0`, `latest`, and `sha-0c28d00` for `linux/amd64` and `linux/arm64`. A scratch release-compose stack was verified on port 15003 without touching production. Next Group D step is D2 (TLS/reverse proxy). No application code changed for V1, so no rebuild, sandbox rerun, or prod promotion was needed. The Backup/restore, Docker Hub/GHCR, and ARM+AMD64 CI ROADMAP items were marked done only after their verification; D2 and D4 remain pending. D4 (blue/green) was added after D2 per user approval.
+**Status: APPROVED SEQUENCE (2026-11-19); D2 TLS/reverse proxy DONE (2026-11-19).** D0 is COMPLETE: the source is published at `https://github.com/michaelpeele/curatarr` (initial commit `8cc8cd3 Initial import of Curatarr`, `main` pushed and tracking `origin/main`). D1 (local ops basics) is DONE and promoted at 2026-11-19T01:52:03Z. D3 (registry and multi-arch CI) is DONE: commit `d9ad777` added the GHCR workflow, the manual run `44442469640` succeeded, and both image manifests were verified for `linux/amd64` and `linux/arm64`. The V1 release bundle is DONE: commit `0c28d00` added `docker-compose.release.yml`, the `v1.0.0` tag was pushed, workflow run `44449305935` succeeded, and both GHCR images were verified at `1.0.0`, `1.0`, `latest`, and `sha-0c28d00` for `linux/amd64` and `linux/arm64`. A scratch release-compose stack was verified on port 15003 without touching production. D2 (TLS/reverse proxy) is DONE with the user-approved scope **documentation plus sandbox validation only**; the guide was added and validated through a scratch HTTPS proxy in front of sandbox, while prod TLS/cutover was intentionally not applied. No application code changed for V1, so no rebuild, sandbox rerun, or prod promotion was needed. The Backup/restore, Docker Hub/GHCR, and ARM+AMD64 CI ROADMAP items were marked done only after their verification; D4 remains pending. D4 (blue/green) was added after D2 per user approval.
 
 ## Scope
 
@@ -107,6 +107,19 @@ Why after D2: blue/green needs the backup discipline from D1 and the reverse-pro
 - No schema changes, no new endpoints, no UI changes.
 - Implementation complete (2026-11-19): image tags and `TS_EXTRA_ARGS` were added to `docker-compose.yml`; `.env.example` now matches the actual compose keys; `BACKUP-RESTORE.md` was added and linked from `README.md`, `.project_documents/README.md`, `REMAINING-WORK-GROUPS.md`, and the ROADMAP D1 tracker. Sandbox verification, backup/restore rehearsal, prod promotion, and bundle verification all passed; see `PROGRESS.md`.
 
+### D2 — TLS / reverse proxy (DONE 2026-11-19)
+
+Scope confirmed by the user: **document and validate on sandbox only**. Do not change the live production stack, do not promote, and do not require a public DNS/domain decision. Curatarr remains HTTP behind the proxy; TLS terminates at Tailscale or at the reverse proxy, never in .NET.
+
+Implementation complete: `.project_documents/TLS-REVERSE-PROXY.md` documents Tailscale HTTPS, Caddy + Let's Encrypt, nginx/Certbot, and Traefik equivalents. README wording was updated to the Tailscale HTTPS URL and links the guide. A scratch Caddy proxy with a self-signed certificate was validated in front of sandbox `:5174`: HTTPS root/API access worked, login worked, and authenticated SignalR negotiation returned 200. The expected unauthenticated `/api/me` 401 was the only console message; there were no application errors. Scratch resources were removed and production was untouched.
+
+- Add `.project_documents/TLS-REVERSE-PROXY.md` as the supported operator guide.
+- Lead with the existing Tailscale HTTPS path. The current `curatarr-tailscale-data/serve.json` maps `${TS_CERT_DOMAIN}:443` HTTPS to local port 80; update README wording from plain `http://curatarr` to the Tailscale HTTPS URL while noting plain HTTP remains available only where explicitly configured.
+- Include a Caddy + Let's Encrypt example for public-domain installs, with `reverse_proxy 127.0.0.1:5173` in front of the released Compose web service. Mention nginx/Traefik equivalents without committing to a full config for each.
+- Document that `/api/` and `/hubs/` are already proxied by the web container to service `curatarr-api`; the external TLS proxy only needs to target the web port.
+- Validate with a scratch HTTPS reverse proxy in front of sandbox `web` on `:5174`, using a self-signed certificate for the test. Verify the app loads over HTTPS, API/SignalR paths proxy correctly, and the browser console has no errors. Remove the scratch proxy afterward.
+- Mark `ROADMAP.md:627` done only after the guide and sandbox validation pass, with an explicit note that production TLS cutover was intentionally not applied.
+
 ### D3 analysis — registry and multi-arch CI (DONE 2026-11-19)
 
 #### What this is
@@ -212,4 +225,4 @@ Do not mark ROADMAP items done until after verification and promotion. Documenta
 4. Use a **host reverse proxy** as the blue/green switch point rather than flipping the Tailscale funnel port.
 5. Treat blue/green as a separate D4 sub-batch, not part of D0–D3.
 
-D0, D1, and D3 are complete. D2 (TLS/reverse proxy) is the next step; D4 remains a follow-on after D2.
+D0, D1, D2, D3, and the V1 release bundle are complete. D4 (blue/green production with sandbox) is the next step.

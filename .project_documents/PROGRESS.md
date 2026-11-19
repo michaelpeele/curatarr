@@ -1,5 +1,25 @@
 # Curatarr — Progress
 
+## ✅ Group D / D2 — TLS reverse proxy (done 2026-11-19)
+
+- [x] Docs-first status set in `PLAN-deployment-operations-hardening.md`, this
+      section, and `REMAINING-WORK-GROUPS.md`. Scope is documentation plus sandbox
+      validation only; production TLS is not applied.
+- [x] Added `.project_documents/TLS-REVERSE-PROXY.md` covering Tailscale HTTPS, a
+      Caddy + Let's Encrypt example, and that Curatarr stays HTTP behind the proxy.
+- [x] Updated `README.md` and docs index/ROADMAP links to point to the TLS guide.
+- [x] Validated the guide with a scratch Caddy HTTPS proxy in front of sandbox
+      `:5174`. Used a self-signed localhost certificate on host port `18443`.
+      `https://localhost:18443/api/bootstrapped` returned `{"isBootstrapped":true}`,
+      the page served `assets/index-UEE7VSba.js` and `assets/index-fENfh4zq.css`,
+      and login worked. After authentication, `POST
+      /hubs/scan/negotiate?negotiateVersion=1` returned 200 with a valid
+      connection. Browser console showed only the expected unauthenticated
+      `/api/me` 401 on the login screen; no application errors. Scratch container
+      and temp directory were removed.
+- [x] Marked `ROADMAP.md:627` done only after sandbox validation, noting that prod
+      TLS/cutover was intentionally not applied; closeout committed and pushed.
+
 ## ✅ V1 release bundle — published-image Compose file (done 2026-11-19)
 
 - [x] Docs-first status set in `PLAN-deployment-operations-hardening.md`, this section,
@@ -96,7 +116,7 @@
       (`?cb=d1-prod-check`) served `assets/index-UEE7VSba.js` /
       `assets/index-fENfh4zq.css`, unchanged from baseline because no app code changed.
       Prod browser console had 0 errors and 0 warnings. ROADMAP Backup/restore was
-      marked done only after promotion; D2/D4 remain pending.
+      marked done only after promotion; D4 remains pending.
 
 ## ✅ Group B follow-up — initial-load overlay and per-card quality (2026-11-19)
 

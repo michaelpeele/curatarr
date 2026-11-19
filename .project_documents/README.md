@@ -15,6 +15,7 @@ Every Curatarr session should start here before making changes.
 | [`REMAINING-WORK-GROUPS.md`](./REMAINING-WORK-GROUPS.md) | Grouping and sequencing of remaining work |
 | [`PLAN-deployment-operations-hardening.md`](./PLAN-deployment-operations-hardening.md) | Approved Group D sequence and implementation plan |
 | [`BACKUP-RESTORE.md`](./BACKUP-RESTORE.md) | Operator runbook for SQLite backup, restore, and verification |
+| [`TLS-REVERSE-PROXY.md`](./TLS-REVERSE-PROXY.md) | Supported HTTPS options: Tailscale, Caddy, nginx, and Traefik |
 | [`CHECKPOINT.md`](./CHECKPOINT.md) | Latest session checkpoint (most recent work + next steps) |
 | [`PROMOTION-folder-level-symlinks.md`](./PROMOTION-folder-level-symlinks.md) | ⏸ Pending promotion runbook: Step 0 backup/restore gate, deploy, verify, rollback |
 
