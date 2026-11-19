@@ -1,0 +1,66 @@
+# D4 blue/green slot template.
+# Validate with an env file, for example:
+#   docker compose -f docker-compose.slot.yml --env-file configs/slot-blue.env.example config --quiet
+# The Compose project name, container names, network, DB volume, and host output
+# paths are all slot-specific. The API service keeps the network alias
+# `curatarr-api` because Curatarr.Web/nginx.conf proxies to that hostname.
+
+name: curatarr-${SLOT_NAME:?SLOT_NAME is required}
+
+services:
+  api:
+    image: ghcr.io/michaelpeele/curatarr-api:${CURATARR_RELEASE_TAG:-1.0.0}
+    container_name: curatarr-${SLOT_NAME:?SLOT_NAME is required}-api
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      TMDB__ApiKey: ${TMDB_KEY:-}
+      Smtp__Host: ${SMTP_HOST:-}
+      Smtp__Port: ${SMTP_PORT:-587}
+      Smtp__User: ${SMTP_USER:-}
+      Smtp__Password: ${SMTP_PASSWORD:-}
+      Smtp__From: ${SMTP_FROM:-}
+      MEDIA_ROOT: /media
+      OUTPUT_ROOT: /output
+      Frontend__BaseUrl: ${FRONTEND_BASE_URL:-http://localhost:5173}
+    ports:
+      - "127.0.0.1:${API_LOCAL_PORT:?API_LOCAL_PORT is required}:5000"
+    expose:
+      - "5000"
+    volumes:
+      - ${HOST_MEDIA_DIR:?HOST_MEDIA_DIR is required}:/media:ro
+      - ${HOST_MEDIA_DIR:?HOST_MEDIA_DIR is required}:/Volumes/data:ro
+      - ${HOST_OUTPUT_DIR:?HOST_OUTPUT_DIR is required}:/output:rw
+      - slot-data:/app/data
+    networks:
+      slot-net:
+        aliases:
+          - curatarr-api
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:5000/api/bootstrapped || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+  web:
+    image: ghcr.io/michaelpeele/curatarr-web:${CURATARR_RELEASE_TAG:-1.0.0}
+    container_name: curatarr-${SLOT_NAME:?SLOT_NAME is required}-web
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "${WEB_LOCAL_PORT:?WEB_LOCAL_PORT is required}:80"
+    volumes:
+      - ${HOST_VIRTUAL_LIBS_DIR:?HOST_VIRTUAL_LIBS_DIR is required}:/output:rw
+    networks:
+      - slot-net
+
+networks:
+  slot-net:
+    name: curatarr-${SLOT_NAME:?SLOT_NAME is required}-net
+
+volumes:
+  slot-data:
+    name: curatarr-${SLOT_NAME:?SLOT_NAME is required}-data

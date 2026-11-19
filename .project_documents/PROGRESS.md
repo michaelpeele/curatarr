@@ -1,5 +1,30 @@
 # Curatarr — Progress
 
+## ✅ Group D / D4 — step 1 slot template (done 2026-11-19)
+
+- [x] Docs-first status set in `PLAN-deployment-operations-hardening.md`, this
+      section, `REMAINING-WORK-GROUPS.md`, and `ROADMAP.md`. User approved **step 1
+      only**: the parameterised slot Compose template and env examples.
+- [x] Added `docker-compose.slot.yml` plus `configs/slot-blue.env.example` and
+      `configs/slot-green.env.example`. Slots are real production slots for roughly
+      3–4 users; sandbox remains the mandatory first gate. Each slot has its own
+      network and internal `curatarr-api` alias because web nginx hardcodes
+      `proxy_pass http://curatarr-api:5000`.
+- [x] Validated both slot configs with `docker compose --env-file ... config --quiet`
+      and confirmed no container, port, volume, or output-path collisions with the
+      sandbox stack or current single-stack production layout. Blue resolves to
+      `curatarr-blue-api`/`curatarr-blue-web`, ports `15100`/`15173`, volume
+      `curatarr-blue-data`, network `curatarr-blue-net`; green resolves to
+      `curatarr-green-api`/`curatarr-green-web`, ports `15200`/`15273`, volume
+      `curatarr-green-data`, network `curatarr-green-net`. Both keep API alias
+      `curatarr-api`.
+- [ ] Later, after separate approval: add host edge proxy/Caddyfile and flip/rollback
+      mechanism. Not part of step 1.
+- [ ] Later, after separate approval: extend `promote.sh` with status/deploy/smoke/
+      flip/rollback modes. Not part of step 1.
+- [ ] Production cutover is part of D4 but not performed here. It requires explicit
+      go/no-go, maintenance window, final snapshot, and user-directed flip/rollback.
+
 ## ✅ Group D / D2 — TLS reverse proxy (done 2026-11-19)
 
 - [x] Docs-first status set in `PLAN-deployment-operations-hardening.md`, this

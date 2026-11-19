@@ -1,6 +1,6 @@
 # Plan — Deployment and operations hardening (Group D)
 
-**Status: APPROVED SEQUENCE (2026-11-19); D2 TLS/reverse proxy DONE (2026-11-19).** D0 is COMPLETE: the source is published at `https://github.com/michaelpeele/curatarr` (initial commit `8cc8cd3 Initial import of Curatarr`, `main` pushed and tracking `origin/main`). D1 (local ops basics) is DONE and promoted at 2026-11-19T01:52:03Z. D3 (registry and multi-arch CI) is DONE: commit `d9ad777` added the GHCR workflow, the manual run `44442469640` succeeded, and both image manifests were verified for `linux/amd64` and `linux/arm64`. The V1 release bundle is DONE: commit `0c28d00` added `docker-compose.release.yml`, the `v1.0.0` tag was pushed, workflow run `44449305935` succeeded, and both GHCR images were verified at `1.0.0`, `1.0`, `latest`, and `sha-0c28d00` for `linux/amd64` and `linux/arm64`. A scratch release-compose stack was verified on port 15003 without touching production. D2 (TLS/reverse proxy) is DONE with the user-approved scope **documentation plus sandbox validation only**; the guide was added and validated through a scratch HTTPS proxy in front of sandbox, while prod TLS/cutover was intentionally not applied. No application code changed for V1, so no rebuild, sandbox rerun, or prod promotion was needed. The Backup/restore, Docker Hub/GHCR, and ARM+AMD64 CI ROADMAP items were marked done only after their verification; D4 remains pending. D4 (blue/green) was added after D2 per user approval.
+**Status: APPROVED SEQUENCE (2026-11-19); D2 TLS/reverse proxy DONE (2026-11-19).** D0 is COMPLETE: the source is published at `https://github.com/michaelpeele/curatarr` (initial commit `8cc8cd3 Initial import of Curatarr`, `main` pushed and tracking `origin/main`). D1 (local ops basics) is DONE and promoted at 2026-11-19T01:52:03Z. D3 (registry and multi-arch CI) is DONE: commit `d9ad777` added the GHCR workflow, the manual run `44442469640` succeeded, and both image manifests were verified for `linux/amd64` and `linux/arm64`. The V1 release bundle is DONE: commit `0c28d00` added `docker-compose.release.yml`, the `v1.0.0` tag was pushed, workflow run `44449305935` succeeded, and both GHCR images were verified at `1.0.0`, `1.0`, `latest`, and `sha-0c28d00` for `linux/amd64` and `linux/arm64`. A scratch release-compose stack was verified on port 15003 without touching production. D2 (TLS/reverse proxy) is DONE with the user-approved scope **documentation plus sandbox validation only**; the guide was added and validated through a scratch HTTPS proxy in front of sandbox, while prod TLS/cutover was intentionally not applied. No application code changed for V1, so no rebuild, sandbox rerun, or prod promotion was needed. The Backup/restore, Docker Hub/GHCR, and ARM+AMD64 CI ROADMAP items were marked done only after their verification. D4 (blue/green) analysis has been corrected to real-production blue/green with scheduled maintenance windows and user-directed flip/rollback. D4 step 1 is DONE: the parameterised slot Compose template and blue/green env examples were added and validated. D4 itself remains not done; edge proxy, promote modes, and any cutover are not yet approved or performed. D4 was added after D2 per user approval.
 
 ## Scope
 
@@ -88,6 +88,59 @@ Include:
 - Treat cookie/auth secret continuity and a brief write freeze at cutover as explicit requirements.
 
 Why after D2: blue/green needs the backup discipline from D1 and the reverse-proxy/TLS routing decisions from D2. It adds real operational complexity (three isolated stacks, more disk, more container plumbing), so it follows all other Group D work.
+
+#### D4 analysis — specific next steps (2026-11-19; analysis only)
+
+No code has been changed for D4. Scope was corrected by the user after the first analysis: this deployment is **real production**, with roughly 3–4 users and scheduled maintenance windows. D4 should therefore implement blue/green as the **actual production slot layout**, not merely a scratch rehearsal. Sandbox verification stays the mandatory first gate; the standby production slot is deployed and smoke-tested, the user tests it, and the user directs flip or rollback during an approved maintenance window. Full zero-downtime is not claimed; the value is a reversible, well-logged cutover.
+
+**Proposed slot layout (confirm before implementation):**
+
+| Concern | Sandbox (unchanged) | Blue slot | Green slot |
+| --- | --- | --- | --- |
+| Compose project | `curatarr-sandbox` | `curatarr-blue` | `curatarr-green` |
+| API container | `curatarr-sandbox-api` | `curatarr-blue-api` | `curatarr-green-api` |
+| Web container | `curatarr-sandbox-web` | `curatarr-blue-web` | `curatarr-green-web` |
+| API host port | `5001` | `15100` | `15200` |
+| Web host port | `5174` | `15173` | `15273` |
+| DB volume | `curatarr-sandbox-data` | `curatarr-blue-data` | `curatarr-green-data` |
+| Output dirs | isolated sandbox dirs | `/srv/curatarr/blue/output` and `/srv/curatarr/blue/VirtualLibraries` | `/srv/curatarr/green/output` and `/srv/curatarr/green/VirtualLibraries` |
+| Media | read-only host media dir | shared read-only | shared read-only |
+
+Each slot gets its own Compose network and an internal network alias named `curatarr-api`; this is required because `Curatarr.Web/nginx.conf` hardcodes `proxy_pass http://curatarr-api:5000`. The containers can still be named `curatarr-blue-api` / `curatarr-green-api` at the host level.
+
+**Proposed files and state:**
+
+- `docker-compose.slot.yml`: one parameterised API/web template used twice with different env/state. No Tailscale service in each slot.
+- `configs/slot-blue.env.example`, `configs/slot-green.env.example`, `configs/edge.env.example`: committed examples; real `.env.*` files stay ignored.
+- `docker-compose.edge.yml` plus a generated Caddyfile: host reverse proxy on `80`/`443`, upstream is the active slot web port (`15173` or `15273`).
+- `state/active-slot`: small ignored state file containing `blue` or `green`. All promote modes read/write it through one helper.
+- `.gitignore`: add `state/` if not already ignored.
+
+The existing single-stack `docker-compose.yml`, Tailscale sidecar, `5000`, and `5173` are the current production layout and remain in place until the approved D4 cutover. D4 implementation replaces the exposed stack with the two production slots plus the approved host reverse proxy as the switch point. Tailscale users should reach the same HTTPS hostname/route rather than flipping a per-slot Tailscale funnel; no Tailscale sidecar is added inside either slot.
+
+**Implementation steps, in order:**
+
+1. Add the parameterised `docker-compose.slot.yml` and env examples. Validate both slots with `docker compose -f docker-compose.slot.yml --env-file ... config --quiet` and confirm there are no container, port, volume, or output-path collisions with sandbox or the current prod stack.
+2. Add the host edge proxy files. Caddy is recommended because D2 already documents it. The Caddyfile should proxy `{$CURATARR_DOMAIN}` to the active upstream; a flip rewrites that upstream and runs `caddy reload` rather than restarting API/web containers.
+3. Extend `scripts/promote.sh` with explicit modes while leaving existing `full`, `--sandbox-only`, and `--prod-only` behavior intact:
+   - `--status`: show active slot, standby slot, container health, and proxy upstream.
+   - `--deploy-standby`: recreate only the standby slot from verified images.
+   - `--smoke-standby`: smoke the standby directly on its API/web ports and verify DB integrity/row counts against a restored copy.
+   - `--flip --confirm-cutover`: final snapshot, brief write freeze, copy DB plus `data-protection-keys`, refresh standby, verify, switch proxy, smoke public URL, update active-slot marker.
+   - `--rollback --confirm-cutover`: switch proxy back to the previous slot and smoke it.
+   Each mode logs active/standby slots and result to `logs/promotions.log`.
+4. Make the data rules explicit in the script: media is read-only; only the active slot mounts `/output` writable; the standby verifies against its own restored DB volume; after copying a SQLite backup into a slot volume, run `chown -R 1654:1654 /data` because the API runs as uid 1654.
+5. Preserve auth continuity: keep the public cookie name (`curatarr.auth`) and copy `/app/data/data-protection-keys` with the DB during standby refresh. Direct slot testing may use slot-specific cookie names, but the proxy-facing hostname must not change cookies at cutover.
+6. Rehearse the mechanics on scratch resources first: start blue and green plus the edge proxy on scratch ports/hostnames; deploy standby while active is unchanged; smoke standby; rehearse flip and rollback. Then use the same deploy/smoke/user-test/flip-or-rollback sequence for the real production slots during an approved maintenance window. Verify login, writes, `/api/`, `/hubs/`, and invite/reset links. Record results in `PROGRESS.md`.
+7. Treat production cutover as part of D4, but only after explicit user approval of the maintenance window, DNS/hostname, final snapshot, and go/no-go. The user directs flip or rollback after testing the standby; no automatic cutover.
+
+**Decisions to confirm before implementation:**
+
+1. Approve the slot names, ports, volumes, and output paths above.
+2. Approve D4 scope as real-production blue/green for roughly 3–4 users, with scheduled maintenance windows and user-directed flip/rollback; sandbox verification and a mechanics rehearsal remain mandatory before cutover.
+3. Approve host Caddy as the switch point and keep Tailscale sidecar out of the slot stacks.
+
+Recommendation: accept all three. After approval, implementation can start at step 1; no ROADMAP item is marked done until the production cutover and verification pass.
 
 ## Suggested implementation detail
 
@@ -213,13 +266,13 @@ For D1 and later deployment changes, even docs/compose work must be verified thr
 6. Only after sandbox/manual checks pass, run `./scripts/promote.sh --prod-only` if no code/config changed afterward; otherwise rerun sandbox verification first.
 7. Hard-refresh prod and verify served JS/CSS hashes against the previous prod baseline. Current baseline: `index-UEE7VSba.js` / `index-fENfh4zq.css`.
 
-D4 additionally requires a full cutover rehearsal on sandbox-like scratch resources: deploy standby, smoke-test it against a restored DB copy, flip the reverse proxy, verify cookies/auth and writes, then rehearse rollback. No production cutover without that rehearsal.
+D4 additionally requires a full cutover rehearsal on sandbox-like scratch resources before any real cutover: deploy standby, smoke-test it against a restored DB copy, flip the reverse proxy, verify cookies/auth and writes, then rehearse rollback. After that rehearsal passes, production cutover may be performed only in an approved maintenance window with user-directed flip or rollback.
 
 Do not mark ROADMAP items done until after verification and promotion. Documentation-only closeouts (like Group C) are the exception and should say so explicitly.
 
 ## Decisions recorded
 
-1. **D0 — publish source to GitHub** was added and is COMPLETE; D1 and D3 are also done, and the next step is D2.
+1. **D0 — publish source to GitHub** was added and is COMPLETE; D1, D2, D3, and the V1 release bundle are also done, and the next step is D4.
 2. Run Group D in this order: **D0 → D1 → D3 → D2 → D4**.
 3. Keep **D2 (TLS / reverse proxy)** as the last of the original Group D items; **D4 (blue/green)** follows it because it depends on the routing/TLS work.
 4. Use a **host reverse proxy** as the blue/green switch point rather than flipping the Tailscale funnel port.
