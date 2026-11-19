@@ -1,0 +1,91 @@
+# ─── Curatarr Compose Stack ───────────────────────────────────────────────
+# The app-data volume (${APP_NAME}-data) is compose-managed and auto-created
+# on first `docker compose up`. It replaces two legacy host volumes:
+#   - curatarr-data, curatarr_curatarr-data (both removed in Fix 3)
+# The DB persists at /app/data inside the volume (ASPNETCORE_CONTENTROOT).
+# To reset the first-boot wizard, operator must remove the volume manually:
+#   docker volume rm ${APP_NAME}-data && docker compose up -d
+# ──────────────────────────────────────────────────────────────────────────
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: ./${APP_NAME_PASCAL}.Api/Dockerfile
+    container_name: ${APP_NAME}-api
+    restart: unless-stopped
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - TMDB__ApiKey=${TMDB_KEY:-}
+      # SMTP email (invite/reset links). Empty SMTP_HOST = console
+      # fallback (links logged to `docker logs`, dev mode).
+      - Smtp__Host=${SMTP_HOST:-}
+      - Smtp__Port=${SMTP_PORT:-587}
+      - Smtp__User=${SMTP_USER:-}
+      - Smtp__Password=${SMTP_PASSWORD:-}
+      - Smtp__From=${SMTP_FROM:-}
+      - MEDIA_ROOT=/media
+      - OUTPUT_ROOT=/output
+      - Frontend__BaseUrl=${FRONTEND_BASE_URL:-http://localhost:5173}
+    volumes:
+      - ${HOST_MEDIA_DIR}:/media:ro
+      - ${HOST_OUTPUT_DIR}:/output:rw
+      - ${HOST_MEDIA_DIR}:/Volumes/data:ro
+      - app-data:/app/data
+    networks:
+      - net
+    ports:
+      - "${API_LOCAL_PORT}:5000"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:5000/api/bootstrapped || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+  web:
+    build:
+      context: .
+      dockerfile: ./${APP_NAME_PASCAL}.Web/Dockerfile
+    container_name: ${APP_NAME}-web
+    restart: unless-stopped
+    volumes:
+      - ${HOST_VIRTUAL_LIBS_DIR}:/output:rw
+    # Shares Tailscale's network namespace dynamically
+    network_mode: "service:tailscale"
+    depends_on:
+      - tailscale
+      - api
+
+  tailscale:
+    image: tailscale/tailscale:latest
+    container_name: ts-${APP_NAME}
+    restart: unless-stopped
+    hostname: ${APP_NAME} # Subdomain will dynamically match the project name
+    volumes:
+      - ./${APP_NAME}-tailscale-data:/var/lib/tailscale
+      - /var/run/docker.sock:/var/run/docker.sock
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+      - SYS_ADMIN
+    environment:
+      - TS_AUTHKEY=${TS_AUTHKEY:-}
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_SERVE_CONFIG=/var/lib/tailscale/serve.json
+    ports:
+      - "${WEB_LOCAL_PORT}:80"
+    networks:
+      - net
+
+networks:
+  net:
+    driver: bridge
+
+# NOTE: The `app-data` volume (${APP_NAME}-data) is auto-created on first run.
+# If migrating from manual deployment, ensure old volumes are removed first
+# (see .project_documents/fix-03-stale-image-and-compose-migration.md).
+volumes:
+  app-data:
+    name: ${APP_NAME}-data # Keeps the named volume cleanly tied to the app name
+    # external: true removed - auto-create for fresh installs

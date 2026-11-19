@@ -1,0 +1,39 @@
+<svg viewBox="70 10 180 180" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Curatarr">
+<defs>
+<linearGradient id="skyGrad2" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0%" stop-color="#B9CFE0"/>
+<stop offset="55%" stop-color="#E7D9BE"/>
+<stop offset="100%" stop-color="#EDC9A0"/>
+</linearGradient>
+<clipPath id="skyClip"><rect x="100" y="40" width="120" height="120" rx="2"/></clipPath>
+</defs>
+
+<rect x="80" y="20" width="160" height="160" rx="6" fill="none" stroke="#B8860B" stroke-width="14"/>
+<rect x="88" y="28" width="144" height="144" rx="4" fill="none" stroke="#7A5C10" stroke-width="3"/>
+<rect x="96" y="36" width="128" height="128" rx="3" fill="none" stroke="#E8C766" stroke-width="2"/>
+<circle cx="80" cy="20" r="9" fill="#E8C766" stroke="#7A5C10" stroke-width="2"/>
+<circle cx="240" cy="20" r="9" fill="#E8C766" stroke="#7A5C10" stroke-width="2"/>
+<circle cx="80" cy="180" r="9" fill="#E8C766" stroke="#7A5C10" stroke-width="2"/>
+<circle cx="240" cy="180" r="9" fill="#E8C766" stroke="#7A5C10" stroke-width="2"/>
+
+<g clip-path="url(#skyClip)">
+<rect x="100" y="40" width="120" height="120" fill="url(#skyGrad2)"/>
+<ellipse cx="118" cy="56" rx="10" ry="4" fill="#F7EFDD" opacity="0.7" transform="rotate(-10 118 56)"/>
+<ellipse cx="145" cy="50" rx="9" ry="4" fill="#EAD9C2" opacity="0.6" transform="rotate(8 145 50)"/>
+<ellipse cx="175" cy="58" rx="10" ry="4" fill="#F7EFDD" opacity="0.6" transform="rotate(-6 175 58)"/>
+<ellipse cx="200" cy="66" rx="8" ry="4" fill="#EAD9C2" opacity="0.55" transform="rotate(10 200 66)"/>
+<ellipse cx="130" cy="72" rx="9" ry="4" fill="#DCE7EF" opacity="0.5" transform="rotate(-8 130 72)"/>
+<ellipse cx="185" cy="80" rx="8" ry="4" fill="#DCE7EF" opacity="0.5" transform="rotate(6 185 80)"/>
+<circle cx="196" cy="54" r="16" fill="#F0D9A6" opacity="0.3"/>
+<circle cx="196" cy="54" r="10" fill="#F0D9A6" opacity="0.5"/>
+<circle cx="196" cy="54" r="5" fill="#FBEFD2" opacity="0.9"/>
+<path d="M100 155 C125 142 150 148 175 138 C195 130 210 140 220 136 L220 160 L100 160 Z" fill="#A9C08F" opacity="0.7"/>
+<path d="M100 150 C120 130 150 140 170 128 C190 118 205 132 220 126 L220 160 L100 160 Z" fill="#8FA87C" opacity="0.9"/>
+<polygon points="138,118 151,104 164,118" fill="#5A3B2C"/>
+<rect x="140" y="118" width="22" height="18" fill="#6E4B3A"/>
+<rect x="156" y="100" width="4" height="10" fill="#5A3B2C"/>
+<rect x="147" y="124" width="6" height="6" fill="#E9C97A" opacity="0.9"/>
+<circle cx="128" cy="128" r="8" fill="#5E7A4C"/>
+<rect x="126" y="134" width="3" height="8" fill="#5A3B2C"/>
+</g>
+</svg>

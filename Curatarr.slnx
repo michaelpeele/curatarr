@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="Curatarr.Api/Curatarr.Api.csproj" />
+  <Project Path="Curatarr.Engine/Curatarr.Engine.csproj" />
+  <Project Path="Curatarr.EngineDemo/Curatarr.EngineDemo.csproj" />
+  <Project Path="Curatarr.Tests/Curatarr.Tests.csproj" />
+</Solution>

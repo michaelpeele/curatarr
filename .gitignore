@@ -1,0 +1,39 @@
+# Local config & sensitive keys
+.env
+.env.*
+!.env.example
+tailscale-data/
+curatarr-tailscale-data/
+archive/
+bak-config/
+
+# Databases and local backups
+*.db
+*.db-shm
+*.db-wal
+.backup/
+
+# Local runtime and test artifacts
+.playwright-mcp/
+.test-artifacts/
+logs/
+nginx.conf.bak-*/
+filters-verified.png
+toolbar-snap.yml
+
+# Build artifacts
+**/bin/
+**/obj/
+**/dist/
+**/node_modules/
+*.tsbuildinfo
+*.bak.*
+/nginx.conf
+/CHECKPOINT.md
+/build-api.py
+
+# OS / Editor
+.DS_Store
+.idea/
+.vscode/
+*.user

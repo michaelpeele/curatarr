@@ -1,0 +1,15 @@
+# Node build artifacts — never ship to the nginx runtime stage
+node_modules
+dist
+
+# VCS
+.git
+.gitignore
+
+# Editor/OS noise
+.DS_Store
+.vscode
+.idea
+
+# Config backups
+*.bak*

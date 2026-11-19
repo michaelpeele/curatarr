@@ -1,0 +1,28 @@
+# Docker build/editor noise — never ship to the Docker daemon for the
+# doctor (agent) container's image build (it builds FROM docker:cli).
+**/bin
+**/obj
+**/node_modules
+**/dist
+
+# VCS
+**/.git
+**/.gitignore
+.gitattributes
+
+# Local databases (created fresh in the container)
+**/*.db
+**/*.db-shm
+**/*.db-wal
+
+# Editor/OS noise
+**/.vs
+**/.vscode
+**/.idea
+**/.DS_Store
+**/*.user
+**/*.bak*
+
+# Doctor agent state / profiles (mounted live from host, not baked in)
+doctor/.compose-*
+doctor/.env.*.local

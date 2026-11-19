@@ -1,0 +1,27 @@
+# Build/dependency artifacts — nothing here should reach the Docker daemon
+**/bin
+**/obj
+**/node_modules
+**/dist
+
+# VCS
+**/.git
+**/.gitignore
+.gitattributes
+
+# Local databases (created fresh in the container)
+**/*.db
+**/*.db-shm
+**/*.db-wal
+
+# Tailscale runtime state (root-owned 0700, not build input; unblocks context transfer)
+curatarr-tailscale-data/
+**/curatarr-tailscale-data/
+
+# Editor/OS noise
+**/.vs
+**/.vscode
+**/.idea
+**/.DS_Store
+**/*.user
+**/*.bak*

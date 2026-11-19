@@ -1,0 +1,89 @@
+# ─── Curatarr Sandbox / Staging Stack ─────────────────────────────────────
+# Isolated api+web pair for testing NEW builds before they touch prod.
+# Shares nothing with prod: own project name, containers, network, ports,
+# and DB volume (curatarr-sandbox-data).
+#
+#   # 1. build new images (same command as prod)
+#   docker compose build api web
+#
+#   # 2. start the sandbox from those images (fresh/empty DB)
+#   docker compose -f docker-compose.sandbox.yml up -d
+#
+#   # 3. run the test suite against it
+#   BASE=http://localhost:5001 ./test-api.sh                  # full suite
+#   BASE=http://localhost:5001 WIZARD_ONLY=1 ./test-api.sh    # wizard tests only
+#
+#   # 4. seed the sandbox DB: use scripts/sandbox-seed.sh (stops this stack,
+#   #    copies the prod DB as the base, salvages the sandbox volume's detail
+#   #    columns row-by-row, fixes ownership to uid 1654, optionally nulls N
+#   #    random Rating rows for filter-UI demos, verifies integrity):
+#   ./scripts/sandbox-seed.sh --null-ratings 1500
+#   docker compose -f docker-compose.sandbox.yml up -d
+#   BASE=http://localhost:5001 WIZARD_ONLY=1 ./test-api.sh    # guard tests on seeded data
+#   (do NOT hand-copy curatarr.db* while the sandbox API is running -- it
+#    already has the DB open; also never chown the volume to root, the app
+#    runs as uid 1654 and would see it as "readonly")
+#
+#   # 5. tear down (containers/network; keeps the volume — add -v to reset it)
+#   docker compose -f docker-compose.sandbox.yml down
+#
+# Differences from prod, on purpose:
+#   - No Tailscale (no funnel/serve exposure, no second tailnet node)
+#   - /output points at an isolated host dir (a sandbox reconcile can never
+#     touch prod's VirtualLibraries)
+#   - SMTP vars omitted -> console email fallback (links go to
+#     `docker logs curatarr-sandbox-api`, no real mail sent)
+#   - web published directly on 5174 (nginx :80) instead of via Tailscale
+# ──────────────────────────────────────────────────────────────────────────
+
+name: curatarr-sandbox
+
+services:
+  api:
+    image: curatarr-api:latest
+    container_name: curatarr-sandbox-api
+    restart: "no"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - TMDB__ApiKey=${TMDB_KEY:-}
+      - MEDIA_ROOT=/media
+      - OUTPUT_ROOT=/output
+      - Frontend__BaseUrl=${FRONTEND_BASE_URL:-http://localhost:5173}
+      # Cookies ignore ports: a shared `curatarr.auth` name would sign you out
+      # of prod whenever you log into the sandbox on localhost (and vice versa).
+      - Cookie__Name=curatarr.sandbox.auth
+      # Test-only: exposes Admin-only /api/test/invites for the opt-in
+      # accept-invite integration test. Never set in prod.
+      - Testing__InviteSink=1
+    volumes:
+      - ${HOST_MEDIA_DIR}:/media:ro
+      - ${SANDBOX_OUTPUT_DIR:-/tmp/curatarr-sandbox/output}:/output:rw
+      - ${HOST_MEDIA_DIR}:/Volumes/data:ro
+      - sandbox-data:/app/data
+    # alias so the web image's hardcoded `proxy_pass http://curatarr-api:5000`
+    # resolves inside the sandbox network (prod uses the real container name)
+    networks:
+      default:
+        aliases:
+          - curatarr-api
+    ports:
+      - "5001:5000"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:5000/api/bootstrapped || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+  web:
+    image: curatarr-web:latest
+    container_name: curatarr-sandbox-web
+    restart: "no"
+    depends_on:
+      - api
+    ports:
+      - "5174:80"
+
+volumes:
+  sandbox-data:
+    name: curatarr-sandbox-data

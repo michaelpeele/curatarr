@@ -1,0 +1,159 @@
+/* Curatarr design tokens — derived from the logo palette
+   (ornate gold frame, sage farmhouse landscape).
+   Load Playfair Display + Inter from Google Fonts before this file:
+   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Inter:wght@400;500&display=swap" rel="stylesheet"> */
+
+:root {
+  /* -- raw palette ramps -- */
+  --gold-100: #F5E6C4;
+  --gold-300: #E8C766;
+  --gold-500: #D4AF37;
+  --gold-600: #B8860B;
+  --gold-800: #7A5C10;
+
+  --sage-100: #E4ECDA;
+  --sage-300: #A9C08F;
+  --sage-500: #8FA87C;
+  --sage-600: #6B8552;
+  --sage-800: #4A5E39;
+
+  --dustyblue-300: #B9CFE0;
+  --dustyblue-500: #7FB3D5;
+
+  --rust-500: #D97B4F;
+  --rust-600: #C1573E;
+  --rust-800: #7A2E1E;
+
+  --cream-50:  #FBF6EC;
+  --cream-100: #F7EFDD;
+  --cream-200: #E7D9BE;
+
+  --walnut-700: #3A2E24;
+  --walnut-800: #2B211A;
+  --walnut-900: #1E1712;
+
+  /* -- semantic roles (light mode default) -- */
+  --color-primary: var(--gold-600);
+  --color-primary-hover: var(--gold-500);
+  --color-secondary: var(--sage-600);
+  --color-info: var(--dustyblue-500);
+  --color-success: var(--sage-600);      /* also used for "approved" status */
+  --color-danger: var(--rust-600);       /* also used for "broken link" status */
+  --color-warning: var(--gold-500);
+
+  --surface-page: var(--cream-100);
+  --surface-card: #FFFFFF;
+  --surface-raised: var(--cream-50);
+  --border: #DCD3C2;
+  --border-strong: var(--gold-300);      /* poster card frame border */
+
+  --text-primary: var(--walnut-800);
+  --text-secondary: #6B5F52;
+  --text-muted: #9A8F80;
+  --text-on-accent: #FFFFFF;
+
+  /* -- typography -- */
+  --font-heading: 'Playfair Display', Georgia, serif;   /* library/title text only */
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; /* everything else */
+
+  /* -- layout -- */
+  --radius: 8px;
+  --radius-card: 12px;
+}
+
+[data-theme="dark"] {
+  --surface-page: var(--walnut-900);
+  --surface-card: var(--walnut-800);
+  --surface-raised: var(--walnut-700);
+  --border: #4A3E30;
+  --border-strong: var(--gold-500);
+
+  --text-primary: var(--cream-50);
+  --text-secondary: #C9BCA8;
+  --text-muted: #8A7C6A;
+
+  --color-primary: var(--gold-500);
+  --color-primary-hover: var(--gold-300);
+  --color-secondary: var(--sage-300);
+  --color-success: var(--sage-300);
+  --color-danger: #E08567;   /* lightened rust for readability on dark walnut */
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--surface-page);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes loadingPulse {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 1; }
+}
+
+.loading-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-muted);
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  animation: loadingPulse 1.2s ease-in-out infinite;
+}
+
+.loading-indicator::before {
+  content: "";
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  background: var(--color-primary);
+  animation: loadingPulse 1.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-indicator,
+  .loading-indicator::before {
+    animation: none;
+  }
+}
+
+/* iOS Safari needs at least 44x44 CSS px for reliable taps. Applied only on
+   compact viewports so pointer-precise desktop layouts stay unchanged. */
+@media (max-width: 1023px) {
+  .card-action-row {
+    height: 44px !important;
+  }
+
+  .card-action-button {
+    min-height: 44px !important;
+  }
+
+  .modal-button,
+  .modal-input {
+    min-height: 44px;
+  }
+
+  .modal-button {
+    min-width: 44px;
+  }
+}
+
+/* At 640px+ the 3-column mobile constraint is gone, so card actions can keep
+   a full 44x44 target without overlapping adjacent cards. */
+@media (min-width: 640px) and (max-width: 1023px) {
+  .card-action-button {
+    min-width: 44px !important;
+  }
+}
