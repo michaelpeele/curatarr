@@ -46,7 +46,7 @@ Production deploy sequence:
    - top-level `version: "0.0.1"`
    - service key `svc:curatarr-standby`
    - endpoint `"tcp:443": "http://localhost:5181"`
-5. Apply with `tailscale serve set-config --service=svc:curatarr-standby <file>`.
+5. Apply with `tailscale serve --service=svc:curatarr-standby --https=443 http://localhost:5181`; this configures and advertises the host.
 6. Confirm exact DNS name with `tailscale serve status`.
 7. Persist both primary and standby service config; verify after a Tailscale restart.
 8. During `flip`/`rollback`, swap the Caddy standby upstream and reload edge. The service name stays stable.
@@ -108,7 +108,7 @@ Chosen shape: **Both** — keep the public primary Funnel and add an internal-on
 - Public standby Funnel: reachable off-tailnet, but it publishes the standby and adds a second Tailscale node and auth key. Use only if gating from outside the tailnet is required.
 - Both: recommended here. Public primary stays at `https://curatarr.tail0307d.ts.net -> http://172.22.0.1:5180`; private standby Service resolves as `curatarr-standby` and points to `http://localhost:5181`.
 
-Implementation next: add stable standby listener `:5181`; render active `:5180` and standby `:5181` from one active-slot file; apply `svc:curatarr-standby` with `tailscale serve set-config`; verify tailnet-only DNS and both write-guard states. No code or route changed by this status update.
+Implementation next: add stable standby listener `:5181`; render active `:5180` and standby `:5181` from one active-slot file; apply and advertise `svc:curatarr-standby` with `tailscale serve --service`; verify tailnet-only DNS and both write-guard states. No code or route changed by this status update.
 
 ## Implementation result (2026-11-19)
 
@@ -117,13 +117,13 @@ Implemented the internal standby gate without changing the primary public route.
 - `configs/Caddyfile.template` renders `:5180` to the active slot and `:5181` to the standby slot. `scripts/edge.sh` derives both slots from `state/cutover/active-slot`, so flips and rollbacks keep `curatarr-standby` pointed at standby.
 - `scripts/d4-cutover.sh` prepares `STANDBY_DOMAIN=:5181` and waits for `/api/bootstrapped` on both listeners.
 - `docker-compose.yml` adds a `post_start` bridge inside `ts-curatarr`: `localhost:5181` (IPv4 and IPv6) forwards to the host standby listener at `172.22.0.1:5181`. No second Tailscale node or auth key was added.
-- `scripts/tailscale-standby.sh` renders and applies `svc:curatarr-standby -> http://localhost:5181` with `tailscale serve set-config --service`. The CLI `1.104.7` `--service` file format is `{"version":"0.0.1","endpoints":{"tcp:443":"http://localhost:5181"}}`; `set-config --all` output wraps this in a `services` object.
+- `scripts/tailscale-standby.sh` renders a reference config and applies/advertises `svc:curatarr-standby -> http://localhost:5181` with `tailscale serve --service=svc:curatarr-standby --https=443 http://localhost:5181`. `set-config --service` alone only stored endpoints; it did not create a pending Service host. The CLI form drains and clears any old service config first, then advertises the host.
 - `docker exec ts-curatarr tailscale serve status` reports both the public primary Funnel and `http://curatarr-standby.tail0307d.ts.net:443 (tailnet only) (svc:curatarr-standby)`.
 - Primary Funnel remains `https://curatarr.tail0307d.ts.net (Funnel on)` -> `/ proxy http://172.22.0.1:5180`. Persisted `curatarr-tailscale-data/serve.json` still has `AllowFunnel["${TS_CERT_DOMAIN}:443"]: true` and the same proxy target.
 - Host checks: `:5180/api/bootstrapped` 200, `:5181/api/bootstrapped` 200. Inside `ts-curatarr`, `http://127.0.0.1:5181/api/bootstrapped` and `http://localhost:5181/api/bootstrapped` both return 200.
 - Write guards: active green allows `/output` write; standby blue blocks `/output` write.
 
-Pending tailnet-side prerequisite: `curatarr-standby.tail0307d.ts.net` does not resolve yet. `tailscale serve advertise svc:curatarr-standby` completed without error, but `.Self.CapMap["service-host"]` is still null. Per Tailscale Services docs, an admin must define Service `curatarr-standby` in the admin console with `tcp:443`, approve the service host, and use a tag-based identity for the host. An access grant for destination `svc:curatarr-standby`, port `443`, may also be required. Local and host endpoint validation passes; tailnet HTTPS validation remains blocked until that admin work is done.
+Admin console Service `curatarr-standby` is defined with `tcp:443`, and `curatarr` has `tag:curatarr-service`. DNS now resolves to `100.118.243.134` and `fd7a:115c:a1e0::5739:f387`. The direct CLI command now reports that the node is configured as a service proxy and needs admin approval. `.Self.CapMap["services/curatarr-standby"]` lists the service and ports; `.Self.CapMap["service-host"]` stays null until approval. Pending tailnet-side step: approve the advertised host in Services -> `curatarr-standby` -> Service hosts. An access grant for destination `svc:curatarr-standby`, port `443`, may also be required. Local and host endpoint validation passes; tailnet HTTPS returns `000` until approval.
 
 ## External Funnel failure diagnosis (2026-11-19)
 

@@ -1264,7 +1264,7 @@
 - [ ] Test member invite flow
 - [ ] Test scan pipeline UI
 - [ ] Verify tailscale serve configuration
-- [ ] Define and approve Tailscale Service `curatarr-standby` in the admin console
+- [ ] Approve advertised service host for Tailscale Service `curatarr-standby` in the admin console
 
 ## Tailscale standby gate — manual verification (2026-11-19)
 
@@ -1273,8 +1273,10 @@
 - Edge listens on `:5180` (active green, upstream `127.0.0.1:15273`) and `:5181` (standby blue, upstream `127.0.0.1:15173`).
 - Both host endpoints return 200 for `/api/bootstrapped`. Inside `ts-curatarr`, `http://localhost:5181/api/bootstrapped` returns 200 via the BusyBox `nc` loopback bridge.
 - `svc:curatarr-standby` is configured locally and shown as tailnet only by `tailscale serve status`.
+- Service defined in admin console with `tcp:443`; `curatarr` node tagged `tag:curatarr-service`. DNS resolves to `100.118.243.134` and `fd7a:115c:a1e0::5739:f387`.
+- Direct CLI apply now uses `tailscale serve --service=svc:curatarr-standby --https=443 http://localhost:5181`; CLI reports the node is a service proxy awaiting admin approval.
 - Write guards pass: active green allows `/output` write; standby blue blocks `/output` write.
-- Blocked: `curatarr-standby.tail0307d.ts.net` still does not resolve. `tailscale serve advertise svc:curatarr-standby` ran, but `ServiceHost` capability is null. Admin console Service definition/approval and a tag-based service host are required. No `TS_AUTHKEY` was created or exposed.
+- Blocked: standby HTTPS still returns `000`. `ServiceHost` capability is null until the pending Service host is approved. An ACL grant for `svc:curatarr-standby` port `443` may also be required. No `TS_AUTHKEY` was created or exposed.
 
 ## 🐛 Known Issues
 

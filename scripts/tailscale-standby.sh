@@ -7,9 +7,9 @@ SERVICE="svc:curatarr-standby"
 ENDPOINT="http://localhost:5181"
 STATE_DIR="$ROOT_DIR/state/curatarr-tailscale-data"
 CONFIG_FILE="$STATE_DIR/standby-serve.json"
-CONTAINER_CONFIG="/var/lib/tailscale/standby-serve.json"
 PRIMARY_TARGET="http://172.22.0.1:5180"
 PRIMARY_HOST="https://curatarr.tail0307d.ts.net"
+STANDBY_HOST="https://curatarr-standby.tail0307d.ts.net"
 PERSISTED_SERVE="$ROOT_DIR/curatarr-tailscale-data/serve.json"
 
 require_container() {
@@ -23,7 +23,7 @@ require_container() {
 
 render() {
   mkdir -p "$STATE_DIR"
-  # set-config --service takes the service details; SERVICE is passed as a flag.
+  # Reference config; apply uses the CLI form that also advertises the host.
   cat > "$CONFIG_FILE" <<EOF
 {
   "version": "0.0.1",
@@ -52,10 +52,11 @@ apply() {
   verify_primary
   docker exec "$CONTAINER" sh -c \
     'wget -q -O /dev/null http://172.22.0.1:5181/api/bootstrapped'
-  docker cp "$CONFIG_FILE" "$CONTAINER:$CONTAINER_CONFIG" >/dev/null
-  docker exec "$CONTAINER" tailscale serve set-config \
-    --service="$SERVICE" "$CONTAINER_CONFIG"
-  printf 'Applied Tailscale Service %s -> %s\n' "$SERVICE" "$ENDPOINT"
+  docker exec "$CONTAINER" tailscale serve drain "$SERVICE" >/dev/null 2>&1 || true
+  docker exec "$CONTAINER" tailscale serve clear "$SERVICE" >/dev/null 2>&1 || true
+  docker exec "$CONTAINER" tailscale serve \
+    --service="$SERVICE" --https=443 --yes "$ENDPOINT"
+  printf 'Applied and advertised Tailscale Service %s -> %s\n' "$SERVICE" "$ENDPOINT"
 }
 
 status() {
@@ -68,6 +69,9 @@ status() {
 
 verify_standby() {
   require_container
+  local serve_status
+  serve_status="$(docker exec "$CONTAINER" tailscale serve status)"
+  printf '%s\n' "$serve_status" | grep -F "$STANDBY_HOST (tailnet only) ($SERVICE)" >/dev/null
   docker exec "$CONTAINER" tailscale serve get-config --all | grep -F "$SERVICE" >/dev/null
   docker exec "$CONTAINER" sh -c "wget -q -O /dev/null $ENDPOINT/api/bootstrapped"
   curl -fsS -o /dev/null http://127.0.0.1:5181/api/bootstrapped
