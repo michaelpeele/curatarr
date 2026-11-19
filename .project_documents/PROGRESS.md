@@ -1264,7 +1264,7 @@
 - [ ] Test member invite flow
 - [ ] Test scan pipeline UI
 - [ ] Verify tailscale serve configuration
-- [ ] Approve advertised service host for Tailscale Service `curatarr-standby` in the admin console
+- [x] Approve advertised service host for Tailscale Service `curatarr-standby` in the admin console (2026-11-19)
 
 ## Tailscale standby gate — manual verification (2026-11-19)
 
@@ -1274,9 +1274,11 @@
 - Both host endpoints return 200 for `/api/bootstrapped`. Inside `ts-curatarr`, `http://localhost:5181/api/bootstrapped` returns 200 via the BusyBox `nc` loopback bridge.
 - `svc:curatarr-standby` is configured locally and shown as tailnet only by `tailscale serve status`.
 - Service defined in admin console with `tcp:443`; `curatarr` node tagged `tag:curatarr-service`. DNS resolves to `100.118.243.134` and `fd7a:115c:a1e0::5739:f387`.
-- Direct CLI apply now uses `tailscale serve --service=svc:curatarr-standby --https=443 http://localhost:5181`; CLI reports the node is a service proxy awaiting admin approval.
+- Direct CLI apply uses `tailscale serve --service=svc:curatarr-standby --https=443 http://localhost:5181`; CLI initially reported the node as a service proxy awaiting admin approval.
+- Admin approved the advertised host. `.Self.CapMap["service-host"]` now lists `svc:curatarr-standby` on `100.118.243.134` and `fd7a:115c:a1e0::5739:f387`.
+- Retest after approval: primary HTTPS `200`; standby HTTPS `200` on default DNS, forced IPv4, and forced IPv6; container HTTPS to standby `ok`. Initial timeouts were approval propagation, not routing. Current ACLs needed no extra change.
 - Write guards pass: active green allows `/output` write; standby blue blocks `/output` write.
-- Blocked: standby HTTPS still returns `000`. `ServiceHost` capability is null until the pending Service host is approved. An ACL grant for `svc:curatarr-standby` port `443` may also be required. No `TS_AUTHKEY` was created or exposed.
+- No `TS_AUTHKEY` was created or exposed.
 
 ## 🐛 Known Issues
 
