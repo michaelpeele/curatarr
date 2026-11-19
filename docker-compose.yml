@@ -76,6 +76,25 @@ services:
       - TS_EXTRA_ARGS=${TS_EXTRA_ARGS:-}
       - TS_STATE_DIR=/var/lib/tailscale
       - TS_SERVE_CONFIG=/var/lib/tailscale/serve.json
+    # svc:curatarr-standby targets http://localhost:5181 inside this container.
+    # Bridge that loopback port to the host's tailnet-only standby listener.
+    post_start:
+      - command:
+          - sh
+          - -c
+          - |
+            set -eu
+            cat > /var/lib/tailscale/standby-bridge.sh <<'EOF'
+            #!/bin/sh
+            exec nc 172.22.0.1 5181
+            EOF
+            chmod +x /var/lib/tailscale/standby-bridge.sh
+            if ! nc -z 127.0.0.1 5181 2>/dev/null; then
+              setsid nc -lk -p 5181 -s 127.0.0.1 -e /var/lib/tailscale/standby-bridge.sh >/dev/null 2>&1 &
+            fi
+            if ! nc -z ::1 5181 2>/dev/null; then
+              setsid nc -lk -p 5181 -s ::1 -e /var/lib/tailscale/standby-bridge.sh >/dev/null 2>&1 &
+            fi
     ports:
       - "${WEB_LOCAL_PORT}:80"
     networks:

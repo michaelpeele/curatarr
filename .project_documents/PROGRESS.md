@@ -1264,6 +1264,17 @@
 - [ ] Test member invite flow
 - [ ] Test scan pipeline UI
 - [ ] Verify tailscale serve configuration
+- [ ] Define and approve Tailscale Service `curatarr-standby` in the admin console
+
+## Tailscale standby gate — manual verification (2026-11-19)
+
+- Public primary route unchanged: `https://curatarr.tail0307d.ts.net (Funnel on)` -> `http://172.22.0.1:5180`.
+- Persisted primary `curatarr-tailscale-data/serve.json` keeps `AllowFunnel["${TS_CERT_DOMAIN}:443"]: true` and target `http://172.22.0.1:5180`.
+- Edge listens on `:5180` (active green, upstream `127.0.0.1:15273`) and `:5181` (standby blue, upstream `127.0.0.1:15173`).
+- Both host endpoints return 200 for `/api/bootstrapped`. Inside `ts-curatarr`, `http://localhost:5181/api/bootstrapped` returns 200 via the BusyBox `nc` loopback bridge.
+- `svc:curatarr-standby` is configured locally and shown as tailnet only by `tailscale serve status`.
+- Write guards pass: active green allows `/output` write; standby blue blocks `/output` write.
+- Blocked: `curatarr-standby.tail0307d.ts.net` still does not resolve. `tailscale serve advertise svc:curatarr-standby` ran, but `ServiceHost` capability is null. Admin console Service definition/approval and a tag-based service host are required. No `TS_AUTHKEY` was created or exposed.
 
 ## 🐛 Known Issues
 

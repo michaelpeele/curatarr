@@ -1,8 +1,9 @@
 # Curatarr D4 host edge proxy.
 #
 # Caddy terminates TLS for CURATARR_DOMAIN and forwards to the active production
-# slot's web port on the host. It uses host networking so 127.0.0.1:15173/:15273
-# can be reached without exposing slot APIs publicly.
+# slot's web port on the host. STANDBY_DOMAIN forwards to the non-active slot and
+# stays tailnet-only. Host networking reaches 127.0.0.1:15173/:15273 without
+# exposing slot APIs publicly.
 #
 # Validate:
 #   docker compose -f docker-compose.edge.yml --env-file configs/edge.env.example config --quiet
@@ -22,6 +23,7 @@ services:
       # override values supplied by Docker Compose.
       EDGE_ENV_FILE: /dev/null
       CURATARR_DOMAIN: ${CURATARR_DOMAIN:?CURATARR_DOMAIN is required}
+      STANDBY_DOMAIN: ${STANDBY_DOMAIN:-:5181}
       BLUE_WEB_PORT: ${BLUE_WEB_PORT:-15173}
       GREEN_WEB_PORT: ${GREEN_WEB_PORT:-15273}
       ACTIVE_SLOT: ${ACTIVE_SLOT:-blue}

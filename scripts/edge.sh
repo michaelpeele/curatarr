@@ -27,10 +27,11 @@ ACTIVE_SLOT="${ACTIVE_SLOT:-blue}"
 CADDY_ADMIN="${CADDY_ADMIN:-localhost:2019}"
 SMTP_FROM="${SMTP_FROM:-}"
 CURATARR_DOMAIN="${CURATARR_DOMAIN:-}"
+STANDBY_DOMAIN="${STANDBY_DOMAIN:-:5181}"
 
 require_domain() {
-  if [[ -z "$CURATARR_DOMAIN" ]]; then
-    echo "CURATARR_DOMAIN must be set" >&2
+  if [[ -z "$CURATARR_DOMAIN" || -z "$STANDBY_DOMAIN" ]]; then
+    echo "CURATARR_DOMAIN and STANDBY_DOMAIN must be set" >&2
     exit 1
   fi
 }
@@ -69,6 +70,15 @@ upstream_port() {
   esac
 }
 
+standby_slot() {
+  local slot="$1"
+  case "$slot" in
+    blue) printf 'green' ;;
+    green) printf 'blue' ;;
+    *) echo "Invalid slot: $slot" >&2; exit 1 ;;
+  esac
+}
+
 email_line() {
   if [[ -n "$SMTP_FROM" ]]; then
     printf 'email %s' "$SMTP_FROM"
@@ -78,24 +88,31 @@ email_line() {
 render() {
   require_domain
   require_template
-  local slot upstream email
+  local slot standby upstream standby_upstream email
   slot="$(read_active_slot)"
+  standby="$(standby_slot "$slot")"
   upstream="$(upstream_port "$slot")"
+  standby_upstream="$(upstream_port "$standby")"
   email="$(email_line)"
   mkdir -p "$STATE_DIR"
   sed -e "s|__UPSTREAM_PORT__|${upstream}|g" \
+      -e "s|__STANDBY_UPSTREAM_PORT__|${standby_upstream}|g" \
       -e "s|__CADDY_EMAIL_LINE__|${email}|g" \
       "$TEMPLATE_FILE" > "$RENDERED_FILE"
-  printf 'Rendered Caddyfile for slot %s (upstream 127.0.0.1:%s) to %s\n' \
-    "$slot" "$upstream" "$RENDERED_FILE"
+  printf 'Rendered Caddyfile for active slot %s (upstream 127.0.0.1:%s), standby slot %s (upstream 127.0.0.1:%s) to %s\n' \
+    "$slot" "$upstream" "$standby" "$standby_upstream" "$RENDERED_FILE"
 }
 
 status() {
-  local slot upstream
+  local slot standby upstream standby_upstream
   slot="$(read_active_slot)"
+  standby="$(standby_slot "$slot")"
   upstream="$(upstream_port "$slot")"
+  standby_upstream="$(upstream_port "$standby")"
   printf 'active_slot=%s\n' "$slot"
   printf 'upstream=127.0.0.1:%s\n' "$upstream"
+  printf 'standby_slot=%s\n' "$standby"
+  printf 'standby_upstream=127.0.0.1:%s\n' "$standby_upstream"
   printf 'env_file=%s\n' "$ENV_FILE"
 }
 
@@ -163,7 +180,7 @@ usage() {
 Usage: scripts/edge.sh <command> [options]
 
 Commands:
-  status                         Print active slot and upstream port.
+  status                         Print active/standby slots and upstream ports.
   render                         Render state/Caddyfile without changing routing.
   flip <blue|green> --confirm-cutover
                                  Change active slot and reload Caddy.
