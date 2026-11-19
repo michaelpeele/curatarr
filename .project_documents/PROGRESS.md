@@ -1,6 +1,6 @@
 # Curatarr — Progress
 
-## ⏳ Group D / D3 — registry and multi-arch CI (in progress, 2026-11-19)
+## ✅ Group D / D3 — registry and multi-arch CI (done 2026-11-19)
 
 - [x] Docs-first status set: `PLAN-deployment-operations-hardening.md` marks D3 in
       progress before workflow/README changes.
@@ -8,15 +8,22 @@
       `curatarr-web` to GHCR as `linux/amd64` + `linux/arm64` manifests, triggered by
       `v*` tags, published releases, and manual dispatch. Tags are semver,
       `major.minor`, SHA, and `latest` for tag/release runs.
-- [x] Documented registry pulls, tag policy, and package visibility in `README.md`
-      without changing local `promote.sh` behavior.
-- [ ] Workflow YAML parsed successfully locally. Push D3; user checks the GitHub
-      Actions run and reports success/failure before CI verification is considered
-      complete.
-- [ ] Verify both architectures resolve via `docker buildx imagetools inspect` and
-      that documented pull commands match the published tags.
-- [ ] Mark `ROADMAP.md` Docker Hub/GHCR and ARM+AMD64 CI items done only after the
-      workflow run and manifest checks pass.
+- [x] Documented registry pulls and tag policy in `README.md` without changing local
+      `promote.sh` behavior.
+- [x] Pushed as commit `d9ad777 CI: publish multi-arch images to GHCR`. Ran the
+      workflow via CLI (`gh workflow run publish-images.yml --ref main`); run
+      `44442469640` on `main` completed successfully at 2026-11-19T02:20:48Z with
+      head SHA `d9ad77722ca610388419627ac0f1430211f7f58f`.
+- [x] Verified published manifests with `docker buildx imagetools inspect` on
+      `ghcr.io/michaelpeele/curatarr-api:sha-d9ad777` and
+      `ghcr.io/michaelpeele/curatarr-web:sha-d9ad777`; both resolve to `linux/amd64`
+      and `linux/arm64` in one OCI index. Manual dispatch publishes SHA tags only;
+      semver and `latest` remain reserved for tag/release runs.
+- [x] Pulled both SHA-tagged images locally. The web image serves
+      `assets/index-UEE7VSba.js` / `assets/index-fENfh4zq.css`, matching the current
+      prod baseline. No app code changed, so no local promotion was needed.
+- [x] Marked `ROADMAP.md` Docker Hub/GHCR and ARM+AMD64 CI items done only after the
+      workflow run and manifest checks passed.
 
 ## ✅ Group D / D1 — local ops basics (done 2026-11-19)
 
@@ -54,7 +61,7 @@
       (`?cb=d1-prod-check`) served `assets/index-UEE7VSba.js` /
       `assets/index-fENfh4zq.css`, unchanged from baseline because no app code changed.
       Prod browser console had 0 errors and 0 warnings. ROADMAP Backup/restore was
-      marked done only after promotion; D3/D2/D4 remain pending.
+      marked done only after promotion; D2/D4 remain pending.
 
 ## ✅ Group B follow-up — initial-load overlay and per-card quality (2026-11-19)
 

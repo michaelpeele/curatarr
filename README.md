@@ -158,7 +158,7 @@ GitHub Actions publishes multi-architecture images to GitHub Container Registry 
 | API | `docker pull ghcr.io/michaelpeele/curatarr-api:latest` |
 | Web | `docker pull ghcr.io/michaelpeele/curatarr-web:latest` |
 
-Published tags include semantic versions (for example `1.2.3` and `1.2`), the commit SHA (`sha-<short-sha>`), and `latest` for tag/release runs. Inspect the available platforms with:
+Published tags include semantic versions (for example `1.2.3` and `1.2`), the commit SHA (`sha-<short-sha>`), and `latest` for tag/release runs. A manual dispatch on `main` publishes the SHA tag only; use that tag when inspecting or pulling that run. Inspect the available platforms with:
 
 ```bash
 docker buildx imagetools inspect ghcr.io/michaelpeele/curatarr-api:latest

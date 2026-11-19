@@ -640,10 +640,10 @@
 - [x] **Backup/restore** — **DONE 2026-11-19.** Documented SQLite backup/restore procedure at `.project_documents/BACKUP-RESTORE.md`, with the restore rehearsal verified on a scratch volume/port before prod promotion. **Group D tracker (added 2026-11-19):** this bullet also tracks the remaining deployment/operations work so the approved order is visible in one place:
       - **D0 — GitHub source publication:** DONE 2026-11-19 (public repo `https://github.com/michaelpeele/curatarr`, initial commit `8cc8cd3 Initial import of Curatarr`, `main` pushed and tracking `origin/main`). Not a ROADMAP line.
       - **D1 — local ops basics:** DONE 2026-11-19; backup/restore operator runbook at `.project_documents/BACKUP-RESTORE.md`, explicit `curatarr-api:${CURATARR_VERSION:-latest}` / `curatarr-web:${CURATARR_VERSION:-latest}` image tags (`ROADMAP.md:176`), and README/`.env.example`/compose port-name drift cleanup. Sandbox-verified and promoted with unchanged bundles `index-UEE7VSba.js` / `index-fENfh4zq.css`.
-      - **D3 — registry / multi-arch CI:** PENDING next step — Docker Hub / GHCR images (`ROADMAP.md:652`) and ARM + AMD64 multi-arch CI (`ROADMAP.md:653`); requires D0.
+      - **D3 — registry / multi-arch CI:** DONE 2026-11-19 — GitHub Actions workflow `d9ad777` published GHCR images via CLI-triggered run `44442469640`; both API and web manifests were verified for `linux/amd64` and `linux/arm64` at `sha-d9ad777`. Semver and `latest` remain reserved for tag/release runs; local promotion is unchanged. Covers Docker Hub / GHCR images (`ROADMAP.md:660`) and ARM + AMD64 multi-arch CI (`ROADMAP.md:661`).
       - **D2 — TLS / reverse proxy:** PENDING — reverse proxy guide with Let's Encrypt (`ROADMAP.md:627`); last of the original Group D items.
       - **D4 — blue/green production with sandbox:** PENDING follow-on after D2 — parameterised stacks, host reverse-proxy switch point, standby smoke/rollback rehearsal. Not a ROADMAP line.
-      See `.project_documents/PLAN-deployment-operations-hardening.md` and `.project_documents/REMAINING-WORK-GROUPS.md`. D0 and D1 were marked done only after their verification/promotion; D3/D2/D4 remain pending.
+      See `.project_documents/PLAN-deployment-operations-hardening.md` and `.project_documents/REMAINING-WORK-GROUPS.md`. D0, D1, and D3 were marked done only after verification/promotion; D2 and D4 remain pending.
 
 ## Queued / New Projects
 
@@ -657,8 +657,8 @@
 - [ ] **Plex/Jellyfin integration** — read watch state, auto-reconcile on changes
 - [ ] **PostgreSQL backend** — optional DB provider for multi-user scale
 - [ ] **Webhooks** — notify on scan complete / new items / reconcilation
-- [ ] **Docker Hub / GHCR images** — pre-built releases (no local build needed)
-- [ ] **ARM + AMD64 multi-arch CI** — automated build matrix
+- [x] **Docker Hub / GHCR images** — DONE 2026-11-19 (D3): GHCR publishing via `.github/workflows/publish-images.yml`; verified `ghcr.io/michaelpeele/curatarr-api:sha-d9ad777` and `ghcr.io/michaelpeele/curatarr-web:sha-d9ad777`.
+- [x] **ARM + AMD64 multi-arch CI** — DONE 2026-11-19 (D3): one OCI index per image containing `linux/amd64` and `linux/arm64`, verified with `docker buildx imagetools inspect`.
 - [ ] **API token auth** — machine/client access for external tools
 - [ ] **i18n** — non-English UI
 

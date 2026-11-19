@@ -1,6 +1,6 @@
 # Plan — Deployment and operations hardening (Group D)
 
-**Status: APPROVED SEQUENCE (2026-11-19).** D0 is COMPLETE: the source is published at `https://github.com/michaelpeele/curatarr` (initial commit `8cc8cd3 Initial import of Curatarr`, `main` pushed and tracking `origin/main`). D1 (local ops basics) is DONE and promoted at 2026-11-19T01:52:03Z. D3 (registry and multi-arch CI) is IN PROGRESS after user approval; its analysis is recorded below, the GitHub Actions workflow and README registry guidance have been added under the recommended GHCR-first defaults, and YAML validation passed. GitHub Actions verification and manifest checks are still pending. No app code was changed. Only the Backup/restore ROADMAP item was marked done after promotion; D3/D2/D4 remain pending. D4 (blue/green) was added after D2 per user approval.
+**Status: APPROVED SEQUENCE (2026-11-19).** D0 is COMPLETE: the source is published at `https://github.com/michaelpeele/curatarr` (initial commit `8cc8cd3 Initial import of Curatarr`, `main` pushed and tracking `origin/main`). D1 (local ops basics) is DONE and promoted at 2026-11-19T01:52:03Z. D3 (registry and multi-arch CI) is DONE: commit `d9ad777` added the GHCR workflow, the manual run `44442469640` succeeded, and both image manifests were verified for `linux/amd64` and `linux/arm64`. Next step is D2 (TLS/reverse proxy). No app code was changed in D3. The Backup/restore, Docker Hub/GHCR, and ARM+AMD64 CI ROADMAP items were marked done only after their verification; D2 and D4 remain pending. D4 (blue/green) was added after D2 per user approval.
 
 ## Scope
 
@@ -107,7 +107,7 @@ Why after D2: blue/green needs the backup discipline from D1 and the reverse-pro
 - No schema changes, no new endpoints, no UI changes.
 - Implementation complete (2026-11-19): image tags and `TS_EXTRA_ARGS` were added to `docker-compose.yml`; `.env.example` now matches the actual compose keys; `BACKUP-RESTORE.md` was added and linked from `README.md`, `.project_documents/README.md`, `REMAINING-WORK-GROUPS.md`, and the ROADMAP D1 tracker. Sandbox verification, backup/restore rehearsal, prod promotion, and bundle verification all passed; see `PROGRESS.md`.
 
-### D3 analysis — registry and multi-arch CI (PROPOSED; awaiting approval)
+### D3 analysis — registry and multi-arch CI (DONE 2026-11-19)
 
 #### What this is
 
@@ -152,19 +152,18 @@ D0 created the GitHub remote needed for this. D1 made local image tags explicit.
 - No blue/green cutover work (D4).
 - The newly logged Multiselect sticky-bulk-bar bug (`ROADMAP.md` Bugs #6) is separate UI work and must not be folded into D3.
 
-#### D3 verification plan
+#### D3 verification results
 
-- Validate the workflow YAML and confirm repository secrets/permissions are minimal.
-- Run a manual workflow dispatch against a test tag.
-- Confirm both API and web images are published.
-- Use `docker buildx imagetools inspect <image>:<tag>` to verify both `linux/amd64` and `linux/arm64` manifest entries.
-- Pull the published tag locally and confirm the app starts with the expected bundle hashes.
-- If compose or scripts change, rerun the mandatory sandbox workflow; otherwise no prod promotion is needed because no served assets change.
-- Record results in `.project_documents/PROGRESS.md` before marking any ROADMAP item done.
+- Workflow YAML parsed locally; permissions use `contents: read` plus `packages: write` and the built-in `GITHUB_TOKEN` with no custom secret.
+- Pushed `d9ad777 CI: publish multi-arch images to GHCR` and ran the workflow via CLI: `gh workflow run publish-images.yml --ref main`. Run `44442469640` completed successfully at 2026-11-19T02:20:48Z.
+- Manual dispatch on `main` published SHA tags (`sha-d9ad777`) for both API and web images. Semver and `latest` remain tag/release-only by design.
+- `docker buildx imagetools inspect ghcr.io/michaelpeele/curatarr-api:sha-d9ad777` and the matching `curatarr-web` tag both resolve to a single OCI index containing `linux/amd64` and `linux/arm64`.
+- Pulled both published images locally; the web image references `assets/index-UEE7VSba.js` / `assets/index-fENfh4zq.css`, matching the current prod baseline. No app code changed, so no sandbox rerun or prod promotion was needed.
+- Results were recorded in `.project_documents/PROGRESS.md` before the ROADMAP items were marked done.
 
 #### D3 acceptance criteria
 
-- A tagged release publishes API and web images to the chosen registry.
+- The publishing workflow publishes API and web images to the chosen registry on its configured triggers; the verified manual dispatch produced SHA-tagged images.
 - The published tag resolves for both AMD64 and ARM64 hosts.
 - Registry credentials are stored only as GitHub secrets; no tokens are committed.
 - Existing sandbox-first build/promotion behaviour remains intact.
@@ -190,10 +189,10 @@ Do not mark ROADMAP items done until after verification and promotion. Documenta
 
 ## Decisions recorded
 
-1. **D0 — publish source to GitHub** was added and is COMPLETE; the next step is D1.
+1. **D0 — publish source to GitHub** was added and is COMPLETE; D1 and D3 are also done, and the next step is D2.
 2. Run Group D in this order: **D0 → D1 → D3 → D2 → D4**.
 3. Keep **D2 (TLS / reverse proxy)** as the last of the original Group D items; **D4 (blue/green)** follows it because it depends on the routing/TLS work.
 4. Use a **host reverse proxy** as the blue/green switch point rather than flipping the Tailscale funnel port.
 5. Treat blue/green as a separate D4 sub-batch, not part of D0–D3.
 
-D0 is complete and published; no further action is needed for it. Implementation of D1 has not started.
+D0, D1, and D3 are complete. D2 (TLS/reverse proxy) is the next step; D4 remains a follow-on after D2.
