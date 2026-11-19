@@ -27,6 +27,23 @@ Build curated virtual libraries of movies, shows, and anime from your media coll
 - **(Optional) Tailscale** — for accessing Curatarr via `http://curatarr` on your Tailnet
 - **(Optional) TMDB API Key** — for poster images and metadata enrichment (get one at [themoviedb.org](https://www.themoviedb.org/settings/api))
 
+### Released install (recommended)
+
+If you just want to run the published V1 images, you do not need to clone this repository:
+
+```bash
+mkdir curatarr && cd curatarr
+curl -O https://raw.githubusercontent.com/michaelpeele/curatarr/v1.0.0/docker-compose.release.yml
+cp /path/to/your/.env .env   # or create one using the variables below
+docker compose -f docker-compose.release.yml up -d
+```
+
+The release file pulls `ghcr.io/michaelpeele/curatarr-api:1.0.0` and `ghcr.io/michaelpeele/curatarr-web:1.0.0`. Set `CURATARR_RELEASE_TAG` to choose another published tag such as `1.0`, `latest`, or `sha-<short-sha>`. API and web remain two containers; the web container proxies `/api/` and `/hubs/` to the service named `curatarr-api`.
+
+At minimum, set `HOST_MEDIA_DIR`, `HOST_OUTPUT_DIR`, `HOST_VIRTUAL_LIBS_DIR`, and `FRONTEND_BASE_URL` in `.env`. `TMDB_KEY` and SMTP variables are optional. The API database is stored in the `curatarr-data` named volume.
+
+The source-tree install below is still the right choice for local development or custom builds.
+
 ### Setup
 
 1. **Clone the repo:**
@@ -139,6 +156,7 @@ All configuration via `.env` file (see `.env.example` for full reference):
 | `APP_NAME` | `curatarr` | Container/volume name prefix |
 | `APP_NAME_PASCAL` | `Curatarr` | Source folder prefix used by Dockerfiles |
 | `CURATARR_VERSION` | `latest` | Tag applied to locally built API/web images |
+| `CURATARR_RELEASE_TAG` | `1.0.0` | Tag used by `docker-compose.release.yml` for published GHCR images |
 | `HOST_MEDIA_DIR` | `./media` | Host path to source media (read-only mount) |
 | `HOST_OUTPUT_DIR` | `./output` | Host path for virtual library symlink trees |
 | `HOST_VIRTUAL_LIBS_DIR` | `./output/VirtualLibraries` | Host path served by nginx for generated symlink trees |
@@ -164,6 +182,8 @@ Published tags include semantic versions (for example `1.2.3` and `1.2`), the co
 docker buildx imagetools inspect ghcr.io/michaelpeele/curatarr-api:latest
 docker buildx imagetools inspect ghcr.io/michaelpeele/curatarr-web:latest
 ```
+
+For the recommended one-file install, use [`docker-compose.release.yml`](docker-compose.release.yml) with `docker compose -f docker-compose.release.yml up -d`; see **Released install** above. The API service name must remain `curatarr-api`.
 
 The workflow uses the repository's built-in `GITHUB_TOKEN` with `packages: write`; no custom GitHub secret is required. Local builds and `scripts/promote.sh` still build and use `curatarr-api:latest` / `curatarr-web:latest` from this source tree.
 

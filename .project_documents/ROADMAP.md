@@ -661,6 +661,7 @@
 - [x] **ARM + AMD64 multi-arch CI** — DONE 2026-11-19 (D3): one OCI index per image containing `linux/amd64` and `linux/arm64`, verified with `docker buildx imagetools inspect`.
 - [ ] **API token auth** — machine/client access for external tools
 - [ ] **i18n** — non-English UI
+- [ ] **All-in-one image (single container)** — future packaging item after the V1 release. Combine the API and web image into one image/container so users only pull and run one artifact. V1 ships two published images plus `docker-compose.release.yml`; this item remains open.
 
 ## Known Limitations (documented in README)
 

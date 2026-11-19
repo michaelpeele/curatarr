@@ -1,5 +1,23 @@
 # Curatarr — Progress
 
+## ⏳ V1 release bundle — published-image Compose file (in progress, 2026-11-19)
+
+- [x] Docs-first status set in `PLAN-deployment-operations-hardening.md`, this section,
+      and `REMAINING-WORK-GROUPS.md`; all-in-one image logged as a future unchecked
+      ROADMAP item, not part of V1.
+- [x] Added `docker-compose.release.yml` using the published GHCR images, service name
+      `curatarr-api` (required by nginx proxy), one named data volume, optional env
+      configuration, and no local `build:` blocks.
+- [x] Documented the released install path in `README.md` and added the release tag
+      variable to `.env.example`.
+- [ ] Validate the release Compose file locally and start it against published
+      `1.0.0` images once the `v1.0.0` tag workflow has completed. `docker compose -f
+      docker-compose.release.yml config --quiet` passed and resolved images to
+      `ghcr.io/michaelpeele/curatarr-api:1.0.0` and
+      `ghcr.io/michaelpeele/curatarr-web:1.0.0`.
+- [ ] Push the `v1.0.0` tag, verify the GitHub Actions run and published tags,
+      record results here, and commit the closeout.
+
 ## ✅ Group D / D3 — registry and multi-arch CI (done 2026-11-19)
 
 - [x] Docs-first status set: `PLAN-deployment-operations-hardening.md` marks D3 in

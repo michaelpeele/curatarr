@@ -1,6 +1,6 @@
 # Plan — Deployment and operations hardening (Group D)
 
-**Status: APPROVED SEQUENCE (2026-11-19).** D0 is COMPLETE: the source is published at `https://github.com/michaelpeele/curatarr` (initial commit `8cc8cd3 Initial import of Curatarr`, `main` pushed and tracking `origin/main`). D1 (local ops basics) is DONE and promoted at 2026-11-19T01:52:03Z. D3 (registry and multi-arch CI) is DONE: commit `d9ad777` added the GHCR workflow, the manual run `44442469640` succeeded, and both image manifests were verified for `linux/amd64` and `linux/arm64`. Next step is D2 (TLS/reverse proxy). No app code was changed in D3. The Backup/restore, Docker Hub/GHCR, and ARM+AMD64 CI ROADMAP items were marked done only after their verification; D2 and D4 remain pending. D4 (blue/green) was added after D2 per user approval.
+**Status: APPROVED SEQUENCE (2026-11-19); V1 release bundle IN PROGRESS.** D0 is COMPLETE: the source is published at `https://github.com/michaelpeele/curatarr` (initial commit `8cc8cd3 Initial import of Curatarr`, `main` pushed and tracking `origin/main`). D1 (local ops basics) is DONE and promoted at 2026-11-19T01:52:03Z. D3 (registry and multi-arch CI) is DONE: commit `d9ad777` added the GHCR workflow, the manual run `44442469640` succeeded, and both image manifests were verified for `linux/amd64` and `linux/arm64`. The V1 release bundle is in progress before D2; after V1 ships, the next Group D step is D2 (TLS/reverse proxy). No app code was changed in D3. The Backup/restore, Docker Hub/GHCR, and ARM+AMD64 CI ROADMAP items were marked done only after their verification; D2 and D4 remain pending. D4 (blue/green) was added after D2 per user approval.
 
 ## Scope
 
@@ -168,6 +168,23 @@ D0 created the GitHub remote needed for this. D1 made local image tags explicit.
 - Registry credentials are stored only as GitHub secrets; no tokens are committed.
 - Existing sandbox-first build/promotion behaviour remains intact.
 - ROADMAP items `652` and `653` are marked done only after workflow verification.
+
+### V1 release bundle (post-D3; in progress)
+
+User decision: ship with the two-image recommendation. Do **not** merge API and web into a single image for V1. Instead, add `docker-compose.release.yml` using the published GHCR images so users can install with one file and one command without cloning or building.
+
+Details:
+
+- API service must be named `curatarr-api`; `Curatarr.Web/nginx.conf` proxies `/api/` and `/hubs/` to that hostname.
+- Use `ghcr.io/michaelpeele/curatarr-api:${CURATARR_RELEASE_TAG:-1.0.0}` and `ghcr.io/michaelpeele/curatarr-web:${CURATARR_RELEASE_TAG:-1.0.0}`. Keep the tag variable separate from local `CURATARR_VERSION` so a developer's `latest` value cannot change the released bundle.
+- Keep two separate service blocks; Docker Compose cannot put two images in one service block. Document that this is why Sonarr/Radarr look different: those projects package backend and UI into one image/process.
+- No `build:` blocks, no Tailscale sidecar, and no host API port publish in the release file. Expose the API on the Compose network and publish only the web UI port by default.
+- Preserve the API configuration used by the source compose: `ASPNETCORE_ENVIRONMENT=Production`, `TMDB__ApiKey`, SMTP settings, `MEDIA_ROOT=/media`, `OUTPUT_ROOT=/output`, and `Frontend__BaseUrl`.
+- Preserve the data/media/output volume layout, with a named `curatarr-data` volume and read-only media mounts.
+- Document the release install path in README and add `CURATARR_RELEASE_TAG` to `.env.example`.
+- Push `v1.0.0`; the workflow will publish `1.0.0`, `1.0`, `sha-<short>`, and `latest`. Verify the Actions run and inspect the published tags before marking this done.
+
+Future work: log a single all-in-one image as an unchecked ROADMAP item at the end of the current roadmap. It is explicitly not part of V1.
 
 ## Verification plan (mandatory, per `workflow.md`)
 

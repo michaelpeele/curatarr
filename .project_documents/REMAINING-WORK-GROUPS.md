@@ -65,7 +65,7 @@ Why retired: the user's stated goal — bubble up when the next episode is on in
 
 Analysis doc: `.project_documents/PLAN-metadata-show-enrichment.md` (status **APPROVED / CLOSED**). Next natural group is Group D.
 
-### Group D — Deployment and operations hardening (D0/D1/D3 DONE; D2 NEXT)
+### Group D — Deployment and operations hardening (D0/D1/D3 DONE; V1 release bundle IN PROGRESS; D2 NEXT)
 
 Items:
 - `ROADMAP.md:627` **TLS support**.
@@ -80,7 +80,9 @@ Why grouped: same release/deployment surface; mostly docs and compose/CI changes
 
 Analysis doc: `.project_documents/PLAN-deployment-operations-hardening.md` (status **APPROVED SEQUENCE**). Approved order: **D0 GitHub source publication → D1 local ops basics → D3 registry/multi-arch CI → D2 TLS/reverse proxy → D4 blue/green production with sandbox**. D2 was explicitly moved to the end of the original Group D items; D4 follows it because blue/green depends on the routing/TLS decisions.
 
-Current step: **D2 TLS/reverse proxy (NEXT)**. D1 local ops basics are DONE and promoted: explicit image tags in `docker-compose.yml`, operator backup/restore runbook at `.project_documents/BACKUP-RESTORE.md`, and README/`.env.example`/compose variable-name cleanup. D3 registry/multi-arch CI is DONE: workflow `d9ad777` was run via CLI (`44442469640`), both GHCR images were verified for `linux/amd64` and `linux/arm64`, and local promotion was unchanged. The analysis is in `.project_documents/PLAN-deployment-operations-hardening.md`.
+V1 release bundle (post-D3, IN PROGRESS): add `docker-compose.release.yml` using the two published GHCR images and document a one-file/one-command install. Keep two images for V1; an all-in-one image is logged as a future unchecked ROADMAP item at the end of the roadmap. This does not start D2.
+
+Current step: **V1 release bundle (IN PROGRESS), then D2 TLS/reverse proxy (NEXT)**. D1 local ops basics are DONE and promoted: explicit image tags in `docker-compose.yml`, operator backup/restore runbook at `.project_documents/BACKUP-RESTORE.md`, and README/`.env.example`/compose variable-name cleanup. D3 registry/multi-arch CI is DONE: workflow `d9ad777` was run via CLI (`44442469640`), both GHCR images were verified for `linux/amd64` and `linux/arm64`, and local promotion was unchanged. The analysis is in `.project_documents/PLAN-deployment-operations-hardening.md`.
 
 ### Group E — Scale and security plumbing
 

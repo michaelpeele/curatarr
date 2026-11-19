@@ -1,0 +1,43 @@
+services:
+  curatarr-api:
+    image: ghcr.io/michaelpeele/curatarr-api:${CURATARR_RELEASE_TAG:-1.0.0}
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      TMDB__ApiKey: ${TMDB_KEY:-}
+      Smtp__Host: ${SMTP_HOST:-}
+      Smtp__Port: ${SMTP_PORT:-587}
+      Smtp__User: ${SMTP_USER:-}
+      Smtp__Password: ${SMTP_PASSWORD:-}
+      Smtp__From: ${SMTP_FROM:-}
+      MEDIA_ROOT: /media
+      OUTPUT_ROOT: /output
+      Frontend__BaseUrl: ${FRONTEND_BASE_URL:-http://localhost:5173}
+    expose:
+      - "5000"
+    volumes:
+      - curatarr-data:/app/data
+      - ${HOST_MEDIA_DIR:-./media}:/media:ro
+      - ${HOST_MEDIA_DIR:-./media}:/Volumes/data:ro
+      - ${HOST_OUTPUT_DIR:-./output}:/output:rw
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:5000/api/bootstrapped || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+
+  curatarr-web:
+    image: ghcr.io/michaelpeele/curatarr-web:${CURATARR_RELEASE_TAG:-1.0.0}
+    restart: unless-stopped
+    depends_on:
+      curatarr-api:
+        condition: service_healthy
+    ports:
+      - "${WEB_LOCAL_PORT:-5173}:80"
+    volumes:
+      - ${HOST_VIRTUAL_LIBS_DIR:-./output/VirtualLibraries}:/output:rw
+
+volumes:
+  curatarr-data:
+    name: curatarr-data
