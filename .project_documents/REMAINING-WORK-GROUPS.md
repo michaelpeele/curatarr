@@ -80,7 +80,7 @@ Why grouped: same release/deployment surface; mostly docs and compose/CI changes
 
 Analysis doc: `.project_documents/PLAN-deployment-operations-hardening.md` (status **APPROVED SEQUENCE**). Approved order: **D0 GitHub source publication → D1 local ops basics → D3 registry/multi-arch CI → D2 TLS/reverse proxy → D4 blue/green production with sandbox**. D2 was explicitly moved to the end of the original Group D items; D4 follows it because blue/green depends on the routing/TLS decisions.
 
-Current step: **D3 registry / multi-arch CI (NEXT; analysis PROPOSED, awaiting approval)**. D1 local ops basics are DONE and promoted: explicit image tags in `docker-compose.yml`, operator backup/restore runbook at `.project_documents/BACKUP-RESTORE.md`, and README/`.env.example`/compose variable-name cleanup. The D3 analysis is in `.project_documents/PLAN-deployment-operations-hardening.md` and recommends GHCR first, semver/SHA/`latest` tags, tag-or-release triggers, and multi-platform manifests without changing local promotion yet.
+Current step: **D3 registry / multi-arch CI (IN PROGRESS)**. D1 local ops basics are DONE and promoted: explicit image tags in `docker-compose.yml`, operator backup/restore runbook at `.project_documents/BACKUP-RESTORE.md`, and README/`.env.example`/compose variable-name cleanup. The D3 analysis is in `.project_documents/PLAN-deployment-operations-hardening.md`; approved defaults are GHCR first, semver/SHA/`latest` tags, tag-or-release plus manual triggers, and multi-platform manifests without changing local promotion yet.
 
 ### Group E — Scale and security plumbing
 

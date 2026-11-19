@@ -149,6 +149,24 @@ All configuration via `.env` file (see `.env.example` for full reference):
 | `TS_EXTRA_ARGS` | *(empty)* | Extra Tailscale flags (e.g., `--advertise-tags=tag:container`) |
 | `FRONTEND_BASE_URL` | `http://localhost:5173` | Public URL for invite/reset links in emails — must be recipient-reachable (set to your Tailnet URL in production) |
 
+### Published Images
+
+GitHub Actions publishes multi-architecture images to GitHub Container Registry (GHCR) when a `v*` tag is pushed, a release is published, or the workflow is dispatched manually. Both images include `linux/amd64` and `linux/arm64` in a single manifest.
+
+| Image | Pull command |
+|-------|--------------|
+| API | `docker pull ghcr.io/michaelpeele/curatarr-api:latest` |
+| Web | `docker pull ghcr.io/michaelpeele/curatarr-web:latest` |
+
+Published tags include semantic versions (for example `1.2.3` and `1.2`), the commit SHA (`sha-<short-sha>`), and `latest` for tag/release runs. Inspect the available platforms with:
+
+```bash
+docker buildx imagetools inspect ghcr.io/michaelpeele/curatarr-api:latest
+docker buildx imagetools inspect ghcr.io/michaelpeele/curatarr-web:latest
+```
+
+The workflow uses the repository's built-in `GITHUB_TOKEN` with `packages: write`; no custom GitHub secret is required. Local builds and `scripts/promote.sh` still build and use `curatarr-api:latest` / `curatarr-web:latest` from this source tree.
+
 ---
 
 ## Development Mode (No Docker)

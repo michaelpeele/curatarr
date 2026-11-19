@@ -1,5 +1,23 @@
 # Curatarr — Progress
 
+## ⏳ Group D / D3 — registry and multi-arch CI (in progress, 2026-11-19)
+
+- [x] Docs-first status set: `PLAN-deployment-operations-hardening.md` marks D3 in
+      progress before workflow/README changes.
+- [x] Added `.github/workflows/publish-images.yml`, publishing `curatarr-api` and
+      `curatarr-web` to GHCR as `linux/amd64` + `linux/arm64` manifests, triggered by
+      `v*` tags, published releases, and manual dispatch. Tags are semver,
+      `major.minor`, SHA, and `latest` for tag/release runs.
+- [x] Documented registry pulls, tag policy, and package visibility in `README.md`
+      without changing local `promote.sh` behavior.
+- [ ] Workflow YAML parsed successfully locally. Push D3; user checks the GitHub
+      Actions run and reports success/failure before CI verification is considered
+      complete.
+- [ ] Verify both architectures resolve via `docker buildx imagetools inspect` and
+      that documented pull commands match the published tags.
+- [ ] Mark `ROADMAP.md` Docker Hub/GHCR and ARM+AMD64 CI items done only after the
+      workflow run and manifest checks pass.
+
 ## ✅ Group D / D1 — local ops basics (done 2026-11-19)
 
 - [x] Docs-first status set: `PLAN-deployment-operations-hardening.md` marks D1 in

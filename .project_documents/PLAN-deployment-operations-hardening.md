@@ -1,6 +1,6 @@
 # Plan — Deployment and operations hardening (Group D)
 
-**Status: APPROVED SEQUENCE (2026-11-19).** D0 is COMPLETE: the source is published at `https://github.com/michaelpeele/curatarr` (initial commit `8cc8cd3 Initial import of Curatarr`, `main` pushed and tracking `origin/main`). D1 (local ops basics) is DONE and promoted at 2026-11-19T01:52:03Z. Next step is D3; its analysis is now recorded below and implementation is awaiting approval. No app code was changed. Only the Backup/restore ROADMAP item was marked done after promotion; D3/D2/D4 remain pending. D4 (blue/green) was added after D2 per user approval.
+**Status: APPROVED SEQUENCE (2026-11-19).** D0 is COMPLETE: the source is published at `https://github.com/michaelpeele/curatarr` (initial commit `8cc8cd3 Initial import of Curatarr`, `main` pushed and tracking `origin/main`). D1 (local ops basics) is DONE and promoted at 2026-11-19T01:52:03Z. D3 (registry and multi-arch CI) is IN PROGRESS after user approval; its analysis is recorded below, the GitHub Actions workflow and README registry guidance have been added under the recommended GHCR-first defaults, and YAML validation passed. GitHub Actions verification and manifest checks are still pending. No app code was changed. Only the Backup/restore ROADMAP item was marked done after promotion; D3/D2/D4 remain pending. D4 (blue/green) was added after D2 per user approval.
 
 ## Scope
 
