@@ -4,6 +4,8 @@
 # The Compose project name, container names, network, DB volume, and host output
 # paths are all slot-specific. The API service keeps the network alias
 # `curatarr-api` because Curatarr.Web/nginx.conf proxies to that hostname.
+# Output mounts default to ro. D4 modes set OUTPUT_MOUNT_MODE=rw only on the
+# active slot; proxy-facing slots must keep COOKIE_NAME=curatarr.auth.
 
 name: curatarr-${SLOT_NAME:?SLOT_NAME is required}
 
@@ -23,6 +25,7 @@ services:
       MEDIA_ROOT: /media
       OUTPUT_ROOT: /output
       Frontend__BaseUrl: ${FRONTEND_BASE_URL:-http://localhost:5173}
+      Cookie__Name: ${COOKIE_NAME:-curatarr.auth}
     ports:
       - "127.0.0.1:${API_LOCAL_PORT:?API_LOCAL_PORT is required}:5000"
     expose:
@@ -30,7 +33,7 @@ services:
     volumes:
       - ${HOST_MEDIA_DIR:?HOST_MEDIA_DIR is required}:/media:ro
       - ${HOST_MEDIA_DIR:?HOST_MEDIA_DIR is required}:/Volumes/data:ro
-      - ${HOST_OUTPUT_DIR:?HOST_OUTPUT_DIR is required}:/output:rw
+      - ${HOST_OUTPUT_DIR:?HOST_OUTPUT_DIR is required}:/output:${OUTPUT_MOUNT_MODE:-ro}
       - slot-data:/app/data
     networks:
       slot-net:
@@ -53,7 +56,7 @@ services:
     ports:
       - "${WEB_LOCAL_PORT:?WEB_LOCAL_PORT is required}:80"
     volumes:
-      - ${HOST_VIRTUAL_LIBS_DIR:?HOST_VIRTUAL_LIBS_DIR is required}:/output:rw
+      - ${HOST_VIRTUAL_LIBS_DIR:?HOST_VIRTUAL_LIBS_DIR is required}:/output:${OUTPUT_MOUNT_MODE:-ro}
     networks:
       - slot-net
 

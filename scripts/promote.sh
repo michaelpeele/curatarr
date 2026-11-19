@@ -33,6 +33,8 @@ D4 blue/green modes (read-only unless stated):
                              a final snapshot (BACKUP_DB, optional BACKUP_KEYS_DIR).
   --rollback --confirm-cutover
                              Switch the edge proxy back to the previous slot.
+                             Both modes set the target slot's /output mounts rw
+                             and the old active slot ro after the proxy switch.
 
 Options:
   --check                    With --deploy-standby only: validate configuration
@@ -42,6 +44,8 @@ Options:
 
 D4 env overrides: BLUE_ENV_FILE, GREEN_ENV_FILE, EDGE_ENV_FILE, BACKUP_DB,
 BACKUP_KEYS_DIR. Real slot env files default to configs/slot-<blue|green>.env.
+Slot /output mounts default to ro via OUTPUT_MOUNT_MODE; D4 modes set rw only on
+the active slot. Proxy-facing slots must keep COOKIE_NAME=curatarr.auth.
 
 Cutover is a separate, user-approved operation. This script never changes
 production routing without --confirm-cutover.
@@ -84,6 +88,7 @@ SLOT_COMPOSE="$ROOT/docker-compose.slot.yml"
 EDGE_SH="$ROOT/scripts/edge.sh"
 ACTIVE_FILE="$ROOT/state/active-slot"
 LOG_FILE="$ROOT/logs/promotions.log"
+PUBLIC_COOKIE_NAME=curatarr.auth
 mkdir -p "$(dirname "$LOG_FILE")"
 
 log() { echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] [$MODE] $*" | tee -a "$LOG_FILE"; }
@@ -257,63 +262,117 @@ slot_web_port() { # slot_web_port <env-file>
   sed -n 's/^WEB_LOCAL_PORT=//p' "$1" | tail -n 1
 }
 
+slot_expected_output_mode() { # slot_expected_output_mode <slot> <active>
+  local slot="$1" active="$2"
+  case "$slot" in
+    "$active") echo rw ;;
+    *) echo ro ;;
+  esac
+}
+
+set_slot_output_mode() { # set_slot_output_mode <slot> <rw|ro>
+  local slot="$1" mode="$2" env_file
+  case "$mode" in
+    rw|ro) ;;
+    *) fail "invalid output mount mode '$mode' for slot $slot" ;;
+  esac
+  env_file=$(slot_env_file "$slot")
+  [[ -f "$env_file" ]] || fail "missing env file for slot $slot: $env_file"
+  log "Setting output mount mode for slot $slot to $mode..."
+  OUTPUT_MOUNT_MODE="$mode" docker compose -f "$SLOT_COMPOSE" --env-file "$env_file" up -d --force-recreate --no-build api web
+  log "Output mount mode for slot $slot is now $mode."
+}
+
+public_cookie_name() { # public_cookie_name <env-file>
+  local env_file="$1" name=""
+  [[ -f "$env_file" ]] || fail "missing env file: $env_file"
+  if [[ -n "${COOKIE_NAME:-}" ]]; then
+    name="$COOKIE_NAME"
+  else
+    name=$(sed -n 's/^COOKIE_NAME=//p' "$env_file" | tail -n 1)
+  fi
+  printf '%s' "${name:-$PUBLIC_COOKIE_NAME}"
+}
+
+require_public_cookie() { # require_public_cookie <env-file> <slot>
+  local env_file="$1" slot="$2" name
+  name=$(public_cookie_name "$env_file")
+  if [[ "$name" != "$PUBLIC_COOKIE_NAME" ]]; then
+    fail "slot $slot must use COOKIE_NAME=$PUBLIC_COOKIE_NAME for proxy-facing traffic (found $name)"
+  fi
+  log "Public cookie check PASSED for slot $slot (COOKIE_NAME=$name)."
+}
+
 d4_status() {
-  local active standby slot env_file
+  local active standby slot env_file expected_mode cookie_name have_docker=0
   active=$(d4_active_slot)
   standby=$(d4_standby_slot "$active")
   log "active_slot=$active standby_slot=$standby"
   echo "active_slot=$active"
   echo "standby_slot=$standby"
-  if command -v docker >/dev/null 2>&1; then
-    for slot in "$active" "$standby"; do
-      env_file=$(slot_env_file "$slot")
-      log "slot=$slot env_file=$env_file"
-      echo "--- slot $slot (env: $env_file) ---"
+  if command -v docker >/dev/null 2>&1; then have_docker=1; fi
+  [[ $have_docker -eq 1 ]] || log "docker CLI unavailable; skipped container health"
+  for slot in "$active" "$standby"; do
+    env_file=$(slot_env_file "$slot")
+    expected_mode=$(slot_expected_output_mode "$slot" "$active")
+    cookie_name=$(public_cookie_name "$env_file")
+    log "slot=$slot env_file=$env_file expected_output_mode=$expected_mode cookie_name=$cookie_name"
+    echo "--- slot $slot (env: $env_file, output: $expected_mode, cookie: $cookie_name) ---"
+    if [[ $have_docker -eq 1 ]]; then
       docker compose -f "$SLOT_COMPOSE" --env-file "$env_file" ps 2>&1 || true
-    done
-  else
-    log "docker CLI unavailable; skipped container health"
-  fi
+    else
+      echo "(docker CLI unavailable; skipped container health)"
+    fi
+  done
   echo "--- edge proxy ---"
   "$EDGE_SH" status || true
   log "STATUS complete: active_slot=$active standby_slot=$standby"
 }
 
 d4_deploy_standby() {
-  local active standby env_file
+  local active standby env_file mode=ro
   active=$(d4_active_slot)
   standby=$(d4_standby_slot "$active")
   env_file=$(slot_env_file "$standby")
-  log "active_slot=$active standby_slot=$standby env_file=$env_file"
+  require_public_cookie "$env_file" "$standby"
+  log "active_slot=$active standby_slot=$standby env_file=$env_file output_mode=$mode"
   [[ "$env_file" == *.example ]] && \
     { [[ $CHECK_ONLY -eq 1 ]] || fail "create $ROOT/configs/slot-$standby.env before deploying"; }
-  docker compose -f "$SLOT_COMPOSE" --env-file "$env_file" config --quiet || \
+  OUTPUT_MOUNT_MODE="$mode" docker compose -f "$SLOT_COMPOSE" --env-file "$env_file" config --quiet || \
     fail "standby slot compose config is invalid ($env_file)"
   if [[ $CHECK_ONLY -eq 1 ]]; then
-    log "deploy-check OK: active_slot=$active standby_slot=$standby (no containers started)"
-    echo "deploy-check OK: active=$active standby=$standby"
+    log "deploy-check OK: active_slot=$active standby_slot=$standby output_mode=$mode (no containers started)"
+    echo "deploy-check OK: active=$active standby=$standby output_mode=$mode"
     return 0
   fi
-  log "Recreating standby slot $standby from verified images..."
-  docker compose -f "$SLOT_COMPOSE" --env-file "$env_file" \
+  log "Recreating standby slot $standby from verified images with output_mode=$mode..."
+  OUTPUT_MOUNT_MODE="$mode" docker compose -f "$SLOT_COMPOSE" --env-file "$env_file" \
     up -d --force-recreate --no-build api web
-  log "DEPLOY-STANDBY complete: active_slot=$active standby_slot=$standby (routing unchanged)"
+  log "DEPLOY-STANDBY complete: active_slot=$active standby_slot=$standby output_mode=$mode (routing unchanged)"
 }
 
 d4_smoke_standby() {
-  local active standby env_file api_port web_port
+  local active standby env_file api_port web_port expected_mode="${1:-}"
   active=$(d4_active_slot)
   standby=$(d4_standby_slot "$active")
+  if [[ -z "$expected_mode" ]]; then
+    expected_mode=$(slot_expected_output_mode "$standby" "$active")
+  fi
+  case "$expected_mode" in
+    rw|ro) ;;
+    *) fail "invalid expected output mount mode '$expected_mode' for slot $standby" ;;
+  esac
   env_file=$(slot_env_file "$standby")
   [[ -f "$env_file" ]] || fail "missing env file for standby slot $standby: $env_file"
+  require_public_cookie "$env_file" "$standby"
   api_port=$(slot_api_port "$env_file")
   web_port=$(slot_web_port "$env_file")
   [[ -n "$api_port" && -n "$web_port" ]] || fail "API_LOCAL_PORT/WEB_LOCAL_PORT missing in $env_file"
-  log "active_slot=$active standby_slot=$standby api_port=$api_port web_port=$web_port"
+  log "active_slot=$active standby_slot=$standby api_port=$api_port web_port=$web_port output_mode=$expected_mode"
   wait_ready "http://127.0.0.1:$web_port" "standby web $standby"
   smoke "http://127.0.0.1:$api_port" "standby API $standby"
-  verify_slot_db "$standby"
-  log "SMOKE-STANDBY complete: active_slot=$active standby_slot=$standby"
+  verify_slot_db "$standby" "${BACKUP_DB:-}"
+  log "SMOKE-STANDBY complete: active_slot=$active standby_slot=$standby output_mode=$expected_mode"
 }
 
 restore_slot_db() { # restore_slot_db <slot> <backup-db> [backup-keys-dir]
@@ -351,11 +410,15 @@ smoke_public_url() { # smoke_public_url <domain>
 
 d4_flip() {
   require_confirm_cutover flip
-  local active standby env_file domain backup_db keys_dir
+  local active standby active_env_file standby_env_file domain backup_db keys_dir
   active=$(d4_active_slot)
   standby=$(d4_standby_slot "$active")
-  env_file=$(slot_env_file "$standby")
-  [[ "$env_file" == *.example ]] && fail "create $ROOT/configs/slot-$standby.env before flipping"
+  active_env_file=$(slot_env_file "$active")
+  standby_env_file=$(slot_env_file "$standby")
+  [[ "$active_env_file" == *.example ]] && fail "create $ROOT/configs/slot-$active.env before flipping"
+  [[ "$standby_env_file" == *.example ]] && fail "create $ROOT/configs/slot-$standby.env before flipping"
+  require_public_cookie "$active_env_file" "$active"
+  require_public_cookie "$standby_env_file" "$standby"
   backup_db="${BACKUP_DB:-}"
   [[ -n "$backup_db" && -f "$backup_db" ]] || \
     fail "BACKUP_DB must point to the final verified snapshot"
@@ -363,25 +426,35 @@ d4_flip() {
   domain=$(edge_domain)
   log "active_slot=$active standby_slot=$standby target_slot=$standby"
   log "Precondition: operator must hold a write freeze and have go/no-go approval."
-  docker compose -f "$SLOT_COMPOSE" --env-file "$env_file" stop api || true
+  set_slot_output_mode "$standby" rw
+  docker compose -f "$SLOT_COMPOSE" --env-file "$standby_env_file" stop api || true
   restore_slot_db "$standby" "$backup_db" "$keys_dir"
-  docker compose -f "$SLOT_COMPOSE" --env-file "$env_file" up -d --no-build api web
-  d4_smoke_standby
+  docker compose -f "$SLOT_COMPOSE" --env-file "$standby_env_file" up -d --no-build api web
+  d4_smoke_standby rw
   "$EDGE_SH" flip "$standby" --confirm-cutover || fail "edge flip failed"
+  set_slot_output_mode "$active" ro
   smoke_public_url "$domain"
-  log "FLIP complete: active_slot=$standby (was $active)."
+  log "FLIP complete: active_slot=$standby (was $active) target_output_mode=rw old_active_output_mode=ro."
 }
 
 d4_rollback() {
   require_confirm_cutover rollback
-  local active target domain
+  local active target active_env_file target_env_file domain
   active=$(d4_active_slot)
   target=$(d4_standby_slot "$active")
+  active_env_file=$(slot_env_file "$active")
+  target_env_file=$(slot_env_file "$target")
+  [[ "$active_env_file" == *.example ]] && fail "create $ROOT/configs/slot-$active.env before rollback"
+  [[ "$target_env_file" == *.example ]] && fail "create $ROOT/configs/slot-$target.env before rollback"
+  require_public_cookie "$active_env_file" "$active"
+  require_public_cookie "$target_env_file" "$target"
   domain=$(edge_domain)
   log "active_slot=$active rollback_target=$target"
+  set_slot_output_mode "$target" rw
   "$EDGE_SH" rollback --confirm-cutover || fail "edge rollback failed"
+  set_slot_output_mode "$active" ro
   smoke_public_url "$domain"
-  log "ROLLBACK complete: active_slot=$target (was $active)."
+  log "ROLLBACK complete: active_slot=$target (was $active) target_output_mode=rw old_active_output_mode=ro."
 }
 
 case "$MODE" in

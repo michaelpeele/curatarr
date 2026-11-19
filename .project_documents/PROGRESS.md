@@ -1,5 +1,24 @@
 # Curatarr — Progress
 
+## ✅ Group D / D4 — steps 4-5 data/auth guardrails (done 2026-11-19)
+
+- [x] Docs-first status set in `PLAN-deployment-operations-hardening.md`, this
+      section, `REMAINING-WORK-GROUPS.md`, and `ROADMAP.md`. User approved
+      **steps 4-5 only**: data/auth guardrails for D4 slots. Step 6 scratch
+      rehearsal remains gated for final approval.
+- [x] Implemented and validated guardrails: slot `/output` mounts default to
+      `ro` via `OUTPUT_MOUNT_MODE`; D4 modes set `rw` only on the active slot.
+      Standby DB checks use their own restored volume, and restore keeps
+      `chown -R 1654:1654 /data` plus `data-protection-keys` copy. Proxy-facing
+      slots enforce `COOKIE_NAME=curatarr.auth`. Read-only validation passed:
+      `bash -n scripts/promote.sh`, `./scripts/promote.sh --help`, `--status`,
+      `--deploy-standby --check`, slot Compose config variants, `git diff --check`.
+      No slot started; routing unchanged; production untouched.
+- [ ] Later, after separate approval: step 6 scratch rehearsal of
+      deploy/smoke/flip/rollback on scratch ports and hostname.
+- [ ] Later, after separate approval: production cutover with explicit go/no-go,
+      maintenance window, final snapshot, and user-directed flip/rollback.
+
 ## ✅ Group D / D4 — step 3 promote modes (done 2026-11-19)
 
 - [x] Docs-first status set in `PLAN-deployment-operations-hardening.md`, this
