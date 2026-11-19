@@ -9,6 +9,7 @@
 
 services:
   api:
+    image: curatarr-api:${CURATARR_VERSION:-latest}
     build:
       context: .
       dockerfile: ./${APP_NAME_PASCAL}.Api/Dockerfile
@@ -44,6 +45,7 @@ services:
       start_period: 40s
 
   web:
+    image: curatarr-web:${CURATARR_VERSION:-latest}
     build:
       context: .
       dockerfile: ./${APP_NAME_PASCAL}.Web/Dockerfile
@@ -71,6 +73,7 @@ services:
       - SYS_ADMIN
     environment:
       - TS_AUTHKEY=${TS_AUTHKEY:-}
+      - TS_EXTRA_ARGS=${TS_EXTRA_ARGS:-}
       - TS_STATE_DIR=/var/lib/tailscale
       - TS_SERVE_CONFIG=/var/lib/tailscale/serve.json
     ports:

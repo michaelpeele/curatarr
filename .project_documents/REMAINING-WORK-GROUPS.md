@@ -12,7 +12,9 @@ Order follows `/home/michaelpeele/ai-projects/workflow.md` where a mandated batc
 - `ROADMAP.md:176` **Docker image & container cleanup / consolidation** is partly done for sandbox (`curatarr-api:latest` / `curatarr-web:latest`), but prod still uses `build:` in `docker-compose.yml`. Treat the explicit-tag / single-container cleanup as remaining (Group D).
 - `ROADMAP.md:162` **Show-level metadata** was closed in docs on 2026-11-19. Calendar slice 1 already added the explicit `SourceItem` date columns backfilled from cached `TmdbRawDetails.Json`; the next-episode goal is delivered, and episode drill-down / per-show endpoint / last-updated field were retired. See `.project_documents/PLAN-metadata-show-enrichment.md`.
 
-The two earlier short-term duplicates and the two Group C items are now checked off; the ROADMAP has 16 genuinely open items.
+The two earlier short-term duplicates and the two Group C items are now checked off; the ROADMAP has 16 genuinely open items after adding Bug #6 for the Multiselect bulk bar.
+
+Open UI follow-up reported 2026-11-19: `ROADMAP.md` Bugs #6 — the Multiselect bulk bar must stay frozen/sticky after **Select all**; currently the options disappear after the first scroll. Track this separately from Group D; the registry/multi-arch CI work must not fold it in.
 
 ## Recommended groups / order
 
@@ -78,6 +80,8 @@ Why grouped: same release/deployment surface; mostly docs and compose/CI changes
 
 Analysis doc: `.project_documents/PLAN-deployment-operations-hardening.md` (status **APPROVED SEQUENCE**). Approved order: **D0 GitHub source publication → D1 local ops basics → D3 registry/multi-arch CI → D2 TLS/reverse proxy → D4 blue/green production with sandbox**. D2 was explicitly moved to the end of the original Group D items; D4 follows it because blue/green depends on the routing/TLS decisions.
 
+Current step: **D3 registry / multi-arch CI (NEXT; analysis PROPOSED, awaiting approval)**. D1 local ops basics are DONE and promoted: explicit image tags in `docker-compose.yml`, operator backup/restore runbook at `.project_documents/BACKUP-RESTORE.md`, and README/`.env.example`/compose variable-name cleanup. The D3 analysis is in `.project_documents/PLAN-deployment-operations-hardening.md` and recommends GHCR first, semver/SHA/`latest` tags, tag-or-release triggers, and multi-platform manifests without changing local promotion yet.
+
 ### Group E — Scale and security plumbing
 
 Items:
@@ -108,4 +112,4 @@ Why grouped only for visibility: these are independent; each needs its own plann
 
 ## First item / next item
 
-All six mandated batches from `workflow.md` are complete, including batch #6 (Calendar). Group B and its follow-up are done and promoted; Group C was closed in docs only because Calendar already delivers the next-episode goal and backdrops are not needed. The next natural group is **Group D — Deployment and operations hardening**, with the approved order D0 GitHub source publication (COMPLETE 2026-11-19) → D1 local ops basics (NEXT) → D3 registry/multi-arch CI → D2 TLS/reverse proxy → D4 blue/green production with sandbox. See `.project_documents/PLAN-deployment-operations-hardening.md`. Analysis docs for completed groups B and C are `.project_documents/PLAN-library-grid-ui-polish.md` and `.project_documents/PLAN-metadata-show-enrichment.md`. The old first-item prompt in `.project_documents/PROMPT-first-remaining-item.md` is historical only.
+All six mandated batches from `workflow.md` are complete, including batch #6 (Calendar). Group B and its follow-up are done and promoted; Group C was closed in docs only because Calendar already delivers the next-episode goal and backdrops are not needed. In Group D — Deployment and operations hardening, D0 GitHub source publication is COMPLETE and D1 local ops basics is DONE and promoted. The approved order remains D0 → D1 → D3 registry/multi-arch CI (NEXT) → D2 TLS/reverse proxy → D4 blue/green production with sandbox. See `.project_documents/PLAN-deployment-operations-hardening.md`. Analysis docs for completed groups B and C are `.project_documents/PLAN-library-grid-ui-polish.md` and `.project_documents/PLAN-metadata-show-enrichment.md`. The old first-item prompt in `.project_documents/PROMPT-first-remaining-item.md` is historical only.

@@ -41,8 +41,9 @@ Build curated virtual libraries of movies, shows, and anime from your media coll
    ```
 
 3. **Edit `.env`:**
-   - `MEDIA_ROOT` — host path to your source media (mounted read-only at `/media` in container)
-   - `OUTPUT_ROOT` — host path for virtual library symlink trees (mounted at `/output` in container)
+   - `HOST_MEDIA_DIR` — host path to your source media (mounted read-only at `/media` in container)
+   - `HOST_OUTPUT_DIR` — host path for virtual library symlink trees (mounted at `/output` in container)
+   - `HOST_VIRTUAL_LIBS_DIR` — host path served by nginx for generated symlink trees
    - `TMDB_KEY` — (optional) your TMDB API key for posters/metadata
    - `TS_AUTHKEY` — (optional) Tailscale auth key to join your Tailnet automatically
 
@@ -110,13 +111,13 @@ from any device connected to your Tailscale network (laptop, phone, tablet).
 
 - **`curatarr-api`** — ASP.NET Core 10 API (port 5000)
   - SQLite database at `/app/data/curatarr.db` (persisted in `curatarr-data` volume)
-  - Mounts `MEDIA_ROOT` (read-only) and `OUTPUT_ROOT` (read-write)
-- **`curatarr-web`** — React 18 SPA served via nginx (port 80, mapped to host `WEB_PORT`)
+  - Mounts `HOST_MEDIA_DIR` (read-only) and `HOST_OUTPUT_DIR` (read-write)
+- **`curatarr-web`** — React 18 SPA served via nginx (port 80, mapped to host `WEB_LOCAL_PORT`)
   - Proxies `/api/*` and `/hubs/*` (SignalR) to the API container
   - Shares network namespace with `tailscale` container
 - **`tailscale`** — Tailscale sidecar (optional)
   - Joins your Tailnet with hostname `curatarr`
-  - Exposes `curatarr-web` on port 80 (mapped to host `WEB_PORT`)
+  - Exposes `curatarr-web` on port 80 (mapped to host `WEB_LOCAL_PORT`)
 
 ### Data Model
 
@@ -135,14 +136,18 @@ All configuration via `.env` file (see `.env.example` for full reference):
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `MEDIA_ROOT` | `./media` | Host path to source media (read-only mount) |
-| `OUTPUT_ROOT` | `./output` | Host path for virtual library symlink trees |
-| `WEB_PORT` | `5173` | Host port for web UI |
-| `API_PORT` | `5000` | Host port for API (optional; for debugging) |
+| `APP_NAME` | `curatarr` | Container/volume name prefix |
+| `APP_NAME_PASCAL` | `Curatarr` | Source folder prefix used by Dockerfiles |
+| `CURATARR_VERSION` | `latest` | Tag applied to locally built API/web images |
+| `HOST_MEDIA_DIR` | `./media` | Host path to source media (read-only mount) |
+| `HOST_OUTPUT_DIR` | `./output` | Host path for virtual library symlink trees |
+| `HOST_VIRTUAL_LIBS_DIR` | `./output/VirtualLibraries` | Host path served by nginx for generated symlink trees |
+| `WEB_LOCAL_PORT` | `5173` | Host port for web UI |
+| `API_LOCAL_PORT` | `5000` | Host port for API (optional; for debugging) |
 | `TMDB_KEY` | *(empty)* | TMDB API key (optional; enables posters/metadata) |
 | `TS_AUTHKEY` | *(empty)* | Tailscale auth key (optional; joins Tailnet) |
 | `TS_EXTRA_ARGS` | *(empty)* | Extra Tailscale flags (e.g., `--advertise-tags=tag:container`) |
-| `FRONTEND_BASE_URL` | `https://curatarr.tail0307d.ts.net` | Public URL for invite/reset links in emails — must be recipient-reachable (funnel URL; `http://localhost:5173` is only the compose fallback) |
+| `FRONTEND_BASE_URL` | `http://localhost:5173` | Public URL for invite/reset links in emails — must be recipient-reachable (set to your Tailnet URL in production) |
 
 ---
 
@@ -201,13 +206,13 @@ docker restart curatarr-api
 
 Edit `.env`:
 ```bash
-API_PORT=5001  # or comment out to not expose API port
+API_LOCAL_PORT=5001
 ```
 
 ### Symlinks Not Working in Plex/Jellyfin
 
 1. Check `PathMapping` configuration — translate container paths (`/media/...`) to paths Plex sees (`/mnt/data/media/...`)
-2. Ensure Plex/Jellyfin has read access to `OUTPUT_ROOT` folder and can follow symlinks
+2. Ensure Plex/Jellyfin has read access to `HOST_OUTPUT_DIR` and can follow symlinks
 3. Verify symlinks resolve correctly:
    ```bash
    docker exec curatarr-api ls -lah /output/<YourLibrary>
@@ -219,7 +224,7 @@ API_PORT=5001  # or comment out to not expose API port
 
 - **No HTTPS by default** — cookie auth over plain HTTP. Use a reverse proxy (Caddy, nginx, Traefik) with Let's Encrypt for production.
 - **SQLite unencrypted** — volume access = full data access. Use filesystem-level encryption if needed.
-- **API port exposed** — optional; remove `API_PORT` mapping in `docker-compose.yml` if not needed.
+- **API port exposed** — optional; remove the `API_LOCAL_PORT` mapping in `docker-compose.yml` if not needed.
 
 ---
 
@@ -232,7 +237,7 @@ See `.project_documents/ROADMAP.md` for planned features:
 - **TMDB Metadata Polish** — display posters/genres in UI grids
 - **Calendar View** — upcoming releases filtered by library/media type
 - **Activity Logs** — scan history, errors, user audit trail
-- **Backup/Restore** — documented SQLite dump/restore procedure
+- **Backup/Restore** — see [`.project_documents/BACKUP-RESTORE.md`](./.project_documents/BACKUP-RESTORE.md)
 
 ---
 

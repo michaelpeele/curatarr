@@ -190,21 +190,25 @@ Owner membership in a single transaction.
 ### Compose services
 | Service | Image/Build | Ports | Purpose |
 |---------|-------------|-------|---------|
-| `curatarr-api` | Build from `Curatarr.Api/Dockerfile` | `5000:5000` (optional) | ASP.NET API |
-| `curatarr-web` | Build from `Curatarr.Web/Dockerfile` | `5173:80` | nginx + SPA |
-| `doctor` | Build from `doctor/Dockerfile` (profile: `doctor`) | none | AI/automation agent |
+| `api` | `curatarr-api:${CURATARR_VERSION:-latest}`, built from `Curatarr.Api/Dockerfile` | `${API_LOCAL_PORT:-5000}:5000` | ASP.NET API |
+| `web` | `curatarr-web:${CURATARR_VERSION:-latest}`, built from `Curatarr.Web/Dockerfile` | through Tailscale; host `${WEB_LOCAL_PORT:-5173}:80` | nginx + SPA |
+| `tailscale` | `tailscale/tailscale:latest` | host `${WEB_LOCAL_PORT:-5173}:80` | Tailscale sidecar / Funnel |
 
 ### Env vars (`.env.example`)
 | Var | Default | Purpose |
 |-----|---------|---------|
-| `TMDB_KEY` | *(empty)* | TMDB API key — empty = folder-name parsing only |
-| `FRONTEND_BASE_URL` | `https://curatarr.tail0307d.ts.net` | Base URL for invite/reset links — set to the Tailscale Funnel URL so links work off-device (compose fallback: `http://localhost:5173`) |
-| `MEDIA_ROOT` | `./media` | Host media folder → mounted ro at `/media` |
-| `OUTPUT_ROOT` | `./output` | Host symlink output → mounted at `/output` |
-| `WEB_PORT` | `5173` | Host port for web |
-| `API_PORT` | `5000` | Host port for API |
-| `CODEBASE_ROOT` | `./` | Doctor: host path mounted at `/codebase:rw` |
-| `DOCKER_GID` | `0` | Doctor: docker socket group ID |
+| `APP_NAME` | `curatarr` | Compose project name and container prefix |
+| `APP_NAME_PASCAL` | `Curatarr` | Display name |
+| `CURATARR_VERSION` | `latest` | Explicit tag for `curatarr-api` / `curatarr-web` images |
+| `TMDB_KEY` | *(empty)* | TMDB API key — empty = cached/local metadata only |
+| `FRONTEND_BASE_URL` | `http://localhost:5173` | Base URL for invite/reset links — set to the Tailscale Funnel URL so links work off-device |
+| `HOST_MEDIA_DIR` | `/Volumes/data` | Host media folder → mounted ro at `/media` |
+| `HOST_OUTPUT_DIR` | `/Volumes/data/` | Host symlink output → mounted rw at `/output` |
+| `HOST_VIRTUAL_LIBS_DIR` | `/Volumes/data/VirtualLibraries` | Host virtual libraries → mounted rw at `/output` for web |
+| `WEB_LOCAL_PORT` | `5173` | Host port for the Tailscale/web route |
+| `API_LOCAL_PORT` | `5000` | Host port for API |
+| `TS_AUTHKEY` | *(empty)* | Tailscale auth key |
+| `TS_EXTRA_ARGS` | *(empty)* | Optional extra args passed to the Tailscale sidecar |
 
 ### Key environment wiring
 - `ASPNETCORE_CONTENTROOT=/app/data` (API Dockerfile) → DB lands in named volume at `/app/data`

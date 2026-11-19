@@ -67,6 +67,14 @@
       yellow "Hide requested" card vanished immediately, total 1,877→1,876, green eye in Hidden,
       unhide → Sync restored to 1,877; 0 console errors. Promoted with `promote.sh --prod-only`, prod
       bundle `assets/index-Bo0SBBNN.js`.
+- [ ] **6. Multiselect bulk controls scroll out of view after Select all** — reported 2026-11-19
+      after the recent library-grid UI update. Repro: enter Multiselect, click **Select all**, then
+      scroll the grid; the bulk options (selected count, Select all/Clear, Mark/Hide selects, Cancel,
+      Apply) disappear after the first scroll. Expected: while Multiselect is active, the bulk bar
+      stays frozen/sticky and the selected actions remain visible. Proposed fix: keep the bulk bar
+      pinned below the sticky filter toolbar with an opaque background, border and explicit z-index;
+      do not change selection semantics, and verify it does not overlap `BottomBar` on mobile/iOS.
+      This is a separate UI follow-up; do not fold it into Group D registry/multi-arch CI work.
 
 ## Immediate (after smoke-test sign-off)
 
@@ -174,7 +182,7 @@
       atoms → molecules → organisms hierarchy with shared `theme/`, `hooks/`, `api/` dirs.
       Use MetaDatarr as pilot template (smallest frontend). See MetaDatarr `code/frontend/.project_documents/MIGRATION_PLAN-atomic_design.md` for reference approach.
 - [ ] **Docker image & container cleanup / consolidation:**
-      - Explicit image tagging (`curatarr-api:latest`, `curatarr-web:latest`) to eliminate compose prefix repetition (`curatarr-curatarr-*`).
+      - Explicit image tagging (`curatarr-api:${CURATARR_VERSION:-latest}`, `curatarr-web:${CURATARR_VERSION:-latest}`) to eliminate compose prefix repetition (`curatarr-curatarr-*`). **DONE 2026-11-19** as part of D1; the single-container option below remains open, so this whole item stays unchecked.
       - Single-container deployment option: consolidate ASP.NET Core API and React static SPA (`wwwroot` hosting + proxy removal) into a single standalone container image for lightweight setups.
 - [x] **Mobile & Tablet Responsive Views** — **Done 2026-11-19 (narrowed by user decision).**
       Both mobile and tablet poster-column changes are RETIRED: the existing 3-column mobile grid
@@ -629,13 +637,13 @@
 - [ ] **Watch state tracking** — record which items are watched/ignored per library
 - [ ] **User onboarding polish** — email templates (SMTP sender done 2026-11-14:
       `SmtpEmailSender` + `Smtp__*` env config, Gmail app password, console fallback retained)
-- [ ] **Backup/restore** — documented SQLite dump/restore procedure. **Group D tracker (added 2026-11-19):** this bullet also tracks the remaining deployment/operations work so the approved order is visible in one place:
+- [x] **Backup/restore** — **DONE 2026-11-19.** Documented SQLite backup/restore procedure at `.project_documents/BACKUP-RESTORE.md`, with the restore rehearsal verified on a scratch volume/port before prod promotion. **Group D tracker (added 2026-11-19):** this bullet also tracks the remaining deployment/operations work so the approved order is visible in one place:
       - **D0 — GitHub source publication:** DONE 2026-11-19 (public repo `https://github.com/michaelpeele/curatarr`, initial commit `8cc8cd3 Initial import of Curatarr`, `main` pushed and tracking `origin/main`). Not a ROADMAP line.
-      - **D1 — local ops basics (current next step):** finish this backup/restore guide, explicit `curatarr-api:latest` / `curatarr-web:latest` image tags (`ROADMAP.md:176`), and README/env/compose port-name drift cleanup.
-      - **D3 — registry / multi-arch CI:** Docker Hub / GHCR images (`ROADMAP.md:652`) and ARM + AMD64 multi-arch CI (`ROADMAP.md:653`); requires D0.
-      - **D2 — TLS / reverse proxy:** reverse proxy guide with Let's Encrypt (`ROADMAP.md:627`); last of the original Group D items.
-      - **D4 — blue/green production with sandbox:** new follow-on after D2; parameterised stacks, host reverse-proxy switch point, standby smoke/rollback rehearsal. Not a ROADMAP line.
-      See `.project_documents/PLAN-deployment-operations-hardening.md` and `.project_documents/REMAINING-WORK-GROUPS.md`. Do not mark any of these done until verified/promoted.
+      - **D1 — local ops basics:** DONE 2026-11-19; backup/restore operator runbook at `.project_documents/BACKUP-RESTORE.md`, explicit `curatarr-api:${CURATARR_VERSION:-latest}` / `curatarr-web:${CURATARR_VERSION:-latest}` image tags (`ROADMAP.md:176`), and README/`.env.example`/compose port-name drift cleanup. Sandbox-verified and promoted with unchanged bundles `index-UEE7VSba.js` / `index-fENfh4zq.css`.
+      - **D3 — registry / multi-arch CI:** PENDING next step — Docker Hub / GHCR images (`ROADMAP.md:652`) and ARM + AMD64 multi-arch CI (`ROADMAP.md:653`); requires D0.
+      - **D2 — TLS / reverse proxy:** PENDING — reverse proxy guide with Let's Encrypt (`ROADMAP.md:627`); last of the original Group D items.
+      - **D4 — blue/green production with sandbox:** PENDING follow-on after D2 — parameterised stacks, host reverse-proxy switch point, standby smoke/rollback rehearsal. Not a ROADMAP line.
+      See `.project_documents/PLAN-deployment-operations-hardening.md` and `.project_documents/REMAINING-WORK-GROUPS.md`. D0 and D1 were marked done only after their verification/promotion; D3/D2/D4 remain pending.
 
 ## Queued / New Projects
 

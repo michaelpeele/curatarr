@@ -1,6 +1,6 @@
 # Plan — Deployment and operations hardening (Group D)
 
-**Status: APPROVED SEQUENCE (2026-11-19).** D0 is COMPLETE: the source is published at `https://github.com/michaelpeele/curatarr` (initial commit `8cc8cd3 Initial import of Curatarr`, `main` pushed and tracking `origin/main`). Next step is D1. No app code has been changed and no `ROADMAP.md` item has been marked done. D4 (blue/green) was added after D2 per user approval.
+**Status: APPROVED SEQUENCE (2026-11-19).** D0 is COMPLETE: the source is published at `https://github.com/michaelpeele/curatarr` (initial commit `8cc8cd3 Initial import of Curatarr`, `main` pushed and tracking `origin/main`). D1 (local ops basics) is DONE and promoted at 2026-11-19T01:52:03Z. Next step is D3; its analysis is now recorded below and implementation is awaiting approval. No app code was changed. Only the Backup/restore ROADMAP item was marked done after promotion; D3/D2/D4 remain pending. D4 (blue/green) was added after D2 per user approval.
 
 ## Scope
 
@@ -29,7 +29,7 @@ These share the release/deployment surface. None changes product UI or the media
 
 ### Documentation drift already noticed
 
-- `README.md` says plain HTTP by default and recommends a reverse proxy with Let's Encrypt, but its config table uses `WEB_PORT`/`API_PORT` while compose uses `WEB_LOCAL_PORT`/`API_LOCAL_PORT`.
+- `README.md` drift was corrected during D1: its config table now uses `WEB_LOCAL_PORT`/`API_LOCAL_PORT` and the current host-path variables instead of the old `WEB_PORT`/`API_PORT` names.
 - `.project_documents/DOCKER_FIXES.md` still lists `.env.example` sync and several Docker fixes as pending.
 - `REMAINING-WORK-GROUPS.md` has stale refs for TLS/backup/registry/multi-arch and a stale final “next group” section. These will be corrected as part of documentation prep, not treated as product work.
 
@@ -105,6 +105,70 @@ Why after D2: blue/green needs the backup discipline from D1 and the reverse-pro
 - Add `.project_documents/BACKUP-RESTORE.md` (or equivalent) derived from the existing promotion gate; link it from `README.md` and `REMAINING-WORK-GROUPS.md`.
 - Fix README config table key names and `.env.example` drift as a small docs/config cleanup.
 - No schema changes, no new endpoints, no UI changes.
+- Implementation complete (2026-11-19): image tags and `TS_EXTRA_ARGS` were added to `docker-compose.yml`; `.env.example` now matches the actual compose keys; `BACKUP-RESTORE.md` was added and linked from `README.md`, `.project_documents/README.md`, `REMAINING-WORK-GROUPS.md`, and the ROADMAP D1 tracker. Sandbox verification, backup/restore rehearsal, prod promotion, and bundle verification all passed; see `PROGRESS.md`.
+
+### D3 analysis — registry and multi-arch CI (PROPOSED; awaiting approval)
+
+#### What this is
+
+D3 is about publishing Curatarr container images to a registry and automating builds from GitHub.
+
+- **Docker Hub / GHCR images** (`ROADMAP.md:652`): instead of every install building `curatarr-api` and `curatarr-web` locally, CI publishes named images such as `ghcr.io/michaelpeele/curatarr-api:1.2.3` and `curatarr-web:1.2.3`. Operators can then pull a specific release instead of compiling from source.
+- **ARM + AMD64 multi-arch CI** (`ROADMAP.md:653`): a GitHub Actions workflow uses Docker Buildx (with QEMU emulation where needed) to build the same image for `linux/amd64` and `linux/arm64`, then publishes one multi-platform manifest tag. A single `docker pull` gets the right architecture automatically.
+- **CI** means the build/publish happens in GitHub Actions on a tag, release, or manual dispatch, with credentials stored as repository secrets. It is release infrastructure, not an application feature.
+
+D0 created the GitHub remote needed for this. D1 made local image tags explicit. D3 does **not** require changing app code, the database, or the existing local `promote.sh` flow unless we later choose to consume registry images in production.
+
+#### Why do it
+
+- Easier installs and upgrades: users pull a versioned image instead of building locally.
+- Reproducible releases: the published artifact matches a Git tag/release.
+- Multi-platform support: Raspberry Pi/ARM and normal AMD64 hosts use the same tag.
+- It creates a clean release boundary before D2 TLS and D4 blue/green work.
+
+#### Recommended approach
+
+1. Use **GHCR first**, because the source is already on GitHub and `GITHUB_TOKEN` can publish with limited extra setup. Docker Hub can be added later as a mirror if desired.
+2. Publish separate `curatarr-api` and `curatarr-web` images.
+3. Trigger on version tags (for example `v*`) and manual `workflow_dispatch`. Do not publish on every ordinary commit.
+4. Tag each image with the semantic version, the full Git SHA, and `latest` only for the newest release.
+5. Use Docker Buildx with platforms `linux/amd64,linux/arm64`; use QEMU only for the non-native architecture.
+6. Keep CI as a separate publication path. The existing `docker compose build` / `promote.sh` sandbox-first workflow remains the source of truth for local promotion until a later decision says prod should pull registry images.
+7. Add README guidance showing how to pull a published release and how to verify the architecture with `docker buildx imagetools inspect`.
+
+#### Decisions to confirm
+
+- Registry: **GHCR only first** (recommended) or also Docker Hub now.
+- Visibility: **public images** (recommended, matching the public source) or private GHCR packages.
+- Tag policy: **semver + SHA + `latest`** (recommended) or SHA-only.
+- Trigger: **release/tag + manual dispatch** (recommended) or every push to `main`.
+- Should local `promote.sh` switch to pulling registry images? Recommendation: **not in D3**; keep local builds and promotion unchanged.
+
+#### Out of scope
+
+- No application code, UI changes, schema changes, or endpoint changes.
+- No change to current prod deployment behaviour.
+- No TLS/reverse-proxy work (D2).
+- No blue/green cutover work (D4).
+- The newly logged Multiselect sticky-bulk-bar bug (`ROADMAP.md` Bugs #6) is separate UI work and must not be folded into D3.
+
+#### D3 verification plan
+
+- Validate the workflow YAML and confirm repository secrets/permissions are minimal.
+- Run a manual workflow dispatch against a test tag.
+- Confirm both API and web images are published.
+- Use `docker buildx imagetools inspect <image>:<tag>` to verify both `linux/amd64` and `linux/arm64` manifest entries.
+- Pull the published tag locally and confirm the app starts with the expected bundle hashes.
+- If compose or scripts change, rerun the mandatory sandbox workflow; otherwise no prod promotion is needed because no served assets change.
+- Record results in `.project_documents/PROGRESS.md` before marking any ROADMAP item done.
+
+#### D3 acceptance criteria
+
+- A tagged release publishes API and web images to the chosen registry.
+- The published tag resolves for both AMD64 and ARM64 hosts.
+- Registry credentials are stored only as GitHub secrets; no tokens are committed.
+- Existing sandbox-first build/promotion behaviour remains intact.
+- ROADMAP items `652` and `653` are marked done only after workflow verification.
 
 ## Verification plan (mandatory, per `workflow.md`)
 

@@ -1,5 +1,43 @@
 # Curatarr — Progress
 
+## ✅ Group D / D1 — local ops basics (done 2026-11-19)
+
+- [x] Docs-first status set: `PLAN-deployment-operations-hardening.md` marks D1 in
+      progress before any D1 files are changed.
+- [x] Added explicit prod image tags (`curatarr-api:${CURATARR_VERSION:-latest}`,
+      `curatarr-web:${CURATARR_VERSION:-latest}`) while keeping local build blocks.
+      Also wired documented `TS_EXTRA_ARGS` into the Tailscale sidecar.
+- [x] Added operator-facing `.project_documents/BACKUP-RESTORE.md` and linked it from
+      `README.md`, `.project_documents/README.md`, `REMAINING-WORK-GROUPS.md`, and
+      the ROADMAP D1 tracker.
+- [x] Reconciled README, `.env.example`, and compose variable names/defaults.
+- [x] Verification: `docker compose config --quiet` passed; `docker compose build api web`
+      passed; `./scripts/promote.sh --sandbox-only` passed at 2026-11-19T01:48:12Z
+      (sandbox recreated on :5001/:5174, `sandbox smoke: OK`, WIZARD_ONLY guard
+      `isBootstrapped=true`, one-shot bootstrap guard 400 `Admin user already exists`).
+      `docker compose config --images` reported `curatarr-api:latest`,
+      `curatarr-web:latest`, `tailscale/tailscale:latest`.
+- [x] Sandbox manual check: cache-bust load on `:5174` served
+      `assets/index-UEE7VSba.js` / `assets/index-fENfh4zq.css`; browser console had
+      0 errors and 0 warnings. No app code changed, so bundle hashes are unchanged.
+- [x] Backup/restore runbook exercised against the sandbox volume only: online
+      SQLite backup written to an ignored `bak-config/promotion/...-sandbox-backup`
+      folder; source and restored row counts both `3|2|38375`; `pragma integrity_check`
+      returned `ok`; scratch API on port 15001 returned `{"isBootstrapped":true}`;
+      scratch container and volume were removed. Production DB was not touched.
+      The runbook was updated to `chown -R 1654:1654 /data` after restore because the
+      API image runs as non-root uid 1654.
+- [x] Final drift cleanup: corrected stale D1 wording in the deployment plan and
+      replaced obsolete `MEDIA_ROOT`/`OUTPUT_ROOT`/`WEB_PORT`/`API_PORT`/doctor rows
+      in `TECHNICAL.md` with the current compose/env keys.
+- [x] Promoted with `scripts/promote.sh --prod-only` at 2026-11-19T01:51:51Z (`prod
+      smoke: OK`, completed 01:52:03Z). No build or sandbox rerun after verification;
+      no code changed after sandbox verification. Hard-refresh on prod `:5173`
+      (`?cb=d1-prod-check`) served `assets/index-UEE7VSba.js` /
+      `assets/index-fENfh4zq.css`, unchanged from baseline because no app code changed.
+      Prod browser console had 0 errors and 0 warnings. ROADMAP Backup/restore was
+      marked done only after promotion; D3/D2/D4 remain pending.
+
 ## ✅ Group B follow-up — initial-load overlay and per-card quality (2026-11-19)
 
 - [x] Docs updated first: `PLAN-library-grid-ui-polish.md` status and follow-up text,
