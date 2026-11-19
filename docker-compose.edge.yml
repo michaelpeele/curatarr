@@ -7,6 +7,10 @@
 # Validate:
 #   docker compose -f docker-compose.edge.yml --env-file configs/edge.env.example config --quiet
 
+# Keep edge containers/volumes in a dedicated Compose project. Without this,
+# scratch down removes every service sharing the default directory project name.
+name: curatarr-d4-edge
+
 services:
   edge:
     image: caddy:2-alpine
@@ -23,10 +27,12 @@ services:
       ACTIVE_SLOT: ${ACTIVE_SLOT:-blue}
       CADDY_ADMIN: ${CADDY_ADMIN:-localhost:2019}
       SMTP_FROM: ${SMTP_FROM:-}
+      EDGE_TEMPLATE_FILE: /workspace/configs/Caddyfile.template
+      EDGE_STATE_DIR: /workspace/state
     volumes:
-      - ./configs/Caddyfile.template:/workspace/configs/Caddyfile.template:ro
+      - ${EDGE_TEMPLATE_FILE:-./configs/Caddyfile.template}:/workspace/configs/Caddyfile.template:ro
       - ./scripts/edge.sh:/workspace/scripts/edge.sh:ro
-      - ./state:/workspace/state
+      - ${EDGE_STATE_DIR:-./state}:/workspace/state
       - caddy-data:/data
       - caddy-config:/config
     command: ["/bin/sh", "/workspace/scripts/edge.sh", "entrypoint"]

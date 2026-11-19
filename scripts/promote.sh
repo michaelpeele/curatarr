@@ -42,8 +42,9 @@ Options:
   --confirm-cutover          Mandatory explicit consent for --flip/--rollback.
   -h, --help                 Show this help.
 
-D4 env overrides: BLUE_ENV_FILE, GREEN_ENV_FILE, EDGE_ENV_FILE, BACKUP_DB,
-BACKUP_KEYS_DIR. Real slot env files default to configs/slot-<blue|green>.env.
+D4 env overrides: BLUE_ENV_FILE, GREEN_ENV_FILE, EDGE_ENV_FILE,
+EDGE_TEMPLATE_FILE, EDGE_STATE_DIR, BACKUP_DB, BACKUP_KEYS_DIR. Real slot env
+files default to configs/slot-<blue|green>.env.
 Slot /output mounts default to ro via OUTPUT_MOUNT_MODE; D4 modes set rw only on
 the active slot. Proxy-facing slots must keep COOKIE_NAME=curatarr.auth.
 
@@ -239,7 +240,10 @@ for t in ("AspNetUsers", "VirtualLibraries", "SourceItems"):
 '
 
 verify_slot_db() { # verify_slot_db <slot> [backup-db]
-  local slot="$1" backup_db="${2:-}" vol="curatarr-${slot}-data" live backup
+  local slot="$1"
+  local backup_db="${2:-}"
+  local vol="curatarr-${slot}-data"
+  local live backup
   log "Verifying DB for slot $slot (volume $vol)..."
   live=$(docker run --rm -v "$vol:/data" python:3.11-slim \
     python3 -c "$PY_DB_COUNTS" /data/curatarr.db) || fail "DB check failed for slot $slot"
@@ -376,7 +380,10 @@ d4_smoke_standby() {
 }
 
 restore_slot_db() { # restore_slot_db <slot> <backup-db> [backup-keys-dir]
-  local slot="$1" backup_db="$2" keys_dir="${3:-}" vol="curatarr-${slot}-data"
+  local slot="$1"
+  local backup_db="$2"
+  local keys_dir="${3:-}"
+  local vol="curatarr-${slot}-data"
   [[ -f "$backup_db" ]] || fail "backup DB not found: $backup_db"
   log "Restoring final snapshot into standby slot $slot (volume $vol)..."
   docker run --rm -v "$vol:/data" -v "$backup_db:/backup/curatarr.db:ro" python:3.11-slim sh -c \
@@ -392,20 +399,27 @@ restore_slot_db() { # restore_slot_db <slot> <backup-db> [backup-keys-dir]
   verify_slot_db "$slot" "$backup_db"
 }
 
-smoke_public_url() { # smoke_public_url <domain>
-  local domain="$1" jar code
+smoke_public_url() { # smoke_public_url <domain-or-url>
+  local domain="$1" base jar code
+  local curl_secure=()
+  if [[ "$domain" == http://* || "$domain" == https://* ]]; then
+    base="$domain"
+  else
+    base="https://$domain"
+  fi
+  [[ "$base" == https://* ]] && curl_secure=(-k)
   jar=$(mktemp)
   trap 'rm -f "${jar:-}"' RETURN
-  code=$(curl -sk -o /dev/null -w '%{http_code}' -c "$jar" \
+  code=$(curl -sS "${curl_secure[@]}" -o /dev/null -w '%{http_code}' -c "$jar" \
     -H 'Content-Type: application/json' \
     -d "{\"email\":\"${ADMIN_EMAIL:-michael.peele@gmail.com}\",\"password\":\"${ADMIN_PASSWORD:-Passw0rd!123}\"}" \
-    "https://$domain/api/auth/login")
+    "$base/api/auth/login")
   [[ "$code" == "200" ]] || fail "public URL login failed (HTTP $code)"
   for path in /api/source-items /api/virtual-libraries /api/me; do
-    code=$(curl -sk -o /dev/null -w '%{http_code}' -b "$jar" "https://$domain$path")
+    code=$(curl -sS "${curl_secure[@]}" -o /dev/null -w '%{http_code}' -b "$jar" "$base$path")
     [[ "$code" == "200" ]] || fail "public URL smoke $path failed (HTTP $code)"
   done
-  log "public URL smoke PASSED for https://$domain"
+  log "public URL smoke PASSED for $base"
 }
 
 d4_flip() {
@@ -429,7 +443,7 @@ d4_flip() {
   set_slot_output_mode "$standby" rw
   docker compose -f "$SLOT_COMPOSE" --env-file "$standby_env_file" stop api || true
   restore_slot_db "$standby" "$backup_db" "$keys_dir"
-  docker compose -f "$SLOT_COMPOSE" --env-file "$standby_env_file" up -d --no-build api web
+  OUTPUT_MOUNT_MODE=rw docker compose -f "$SLOT_COMPOSE" --env-file "$standby_env_file" up -d --no-build api web
   d4_smoke_standby rw
   "$EDGE_SH" flip "$standby" --confirm-cutover || fail "edge flip failed"
   set_slot_output_mode "$active" ro

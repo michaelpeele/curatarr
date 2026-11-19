@@ -4,10 +4,6 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 EDGE_COMPOSE="${EDGE_COMPOSE:-$ROOT_DIR/docker-compose.edge.yml}"
 ENV_FILE="${EDGE_ENV_FILE:-$ROOT_DIR/configs/edge.env}"
-TEMPLATE_FILE="$ROOT_DIR/configs/Caddyfile.template"
-STATE_DIR="$ROOT_DIR/state"
-ACTIVE_FILE="$STATE_DIR/active-slot"
-RENDERED_FILE="$STATE_DIR/Caddyfile"
 
 if [[ ! -f "$ENV_FILE" && -f "$ROOT_DIR/configs/edge.env.example" ]]; then
   ENV_FILE="$ROOT_DIR/configs/edge.env.example"
@@ -19,6 +15,11 @@ if [[ -f "$ENV_FILE" ]]; then
   . "$ENV_FILE"
   set +a
 fi
+
+TEMPLATE_FILE="${EDGE_TEMPLATE_FILE:-$ROOT_DIR/configs/Caddyfile.template}"
+STATE_DIR="${EDGE_STATE_DIR:-$ROOT_DIR/state}"
+ACTIVE_FILE="$STATE_DIR/active-slot"
+RENDERED_FILE="$STATE_DIR/Caddyfile"
 
 BLUE_WEB_PORT="${BLUE_WEB_PORT:-15173}"
 GREEN_WEB_PORT="${GREEN_WEB_PORT:-15273}"
@@ -112,7 +113,7 @@ reload() {
   render
   require_compose_file
   docker compose -f "$EDGE_COMPOSE" exec -T edge \
-    caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile
+    caddy reload --config /workspace/state/Caddyfile --adapter caddyfile
 }
 
 require_confirm() {
@@ -142,8 +143,8 @@ flip() {
 }
 
 rollback() {
-  require_confirm "$@"
   local current target
+  require_confirm rollback "$@"
   current="$(read_active_slot)"
   if [[ "$current" == "blue" ]]; then target="green"; else target="blue"; fi
   write_active_slot "$target"
@@ -172,6 +173,9 @@ Commands:
 
 Production cutover requires an explicit maintenance window, final snapshot,
 go/no-go approval, and the --confirm-cutover flag.
+
+Scratch overrides: EDGE_ENV_FILE, EDGE_TEMPLATE_FILE, EDGE_STATE_DIR,
+EDGE_COMPOSE. Defaults stay on production config/state paths.
 EOF
 }
 

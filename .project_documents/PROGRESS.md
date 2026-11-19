@@ -1,11 +1,43 @@
 # Curatarr — Progress
 
+## ✅ Group D / D4 — step 6 scratch rehearsal (done 2026-11-19)
+
+- [x] Docs-first status set in `PLAN-deployment-operations-hardening.md`, this
+      section, `REMAINING-WORK-GROUPS.md`, and `ROADMAP.md`. User approved step 6
+      after item 1; rehearsal was scratch-only.
+- [x] Build/sandbox gate passed: `./scripts/promote.sh --sandbox-only` rebuilt
+      `api`/`web`, recreated sandbox, smoke passed, and
+      `BASE=http://localhost:5001 WIZARD_ONLY=1 ./test-api.sh` passed.
+- [x] `scripts/d4-rehearsal.sh` isolated scratch slots and edge under ignored
+      `state/rehearsal/`; public URL `http://localhost:51573`. Snapshot came
+      from `curatarr-sandbox-data`, never prod.
+- [x] Rehearsal passed: initial active=blue, upstream `127.0.0.1:15173`;
+      `--deploy-standby --check`, `--deploy-standby`, `--smoke-standby` (DB
+      integrity ok; counts AspNetUsers=3, VirtualLibraries=2, SourceItems=38375
+      matched backup), `--flip --confirm-cutover` to green, and
+      `--rollback --confirm-cutover` back to blue. Final upstream
+      `127.0.0.1:15173`; blue rw, green ro.
+- [x] Public checks passed: `/api/bootstrapped`, `/api/me`, SignalR negotiate
+      on `/hubs/scan`, `/hubs/activity`, `/hubs/logs`, and SPA
+      `/accept-invite?...` / `/reset-password?...`. Bare `/hubs/` is 404;
+      real hubs are listed above.
+- [x] Write guardrails passed: active slot writable, standby `/output` blocked
+      (`blue-write-ok`/`green-write-ok`, `blue-write-blocked`/`green-write-blocked`).
+- [x] Teardown removed scratch containers. First down used the default Compose
+      project and briefly stopped prod containers. Prod was restored immediately
+      with `docker compose -f docker-compose.yml up -d --no-build` and verified
+      `prod-api=200`, `prod-web=200`. Root cause fixed with
+      `name: curatarr-d4-edge`; re-run left prod containers up.
+- [x] No production cutover or prod routing change.
+- [ ] Later, after separate approval: production cutover with explicit go/no-go,
+      maintenance window, final snapshot, and user-directed flip/rollback.
+
 ## ✅ Group D / D4 — steps 4-5 data/auth guardrails (done 2026-11-19)
 
 - [x] Docs-first status set in `PLAN-deployment-operations-hardening.md`, this
       section, `REMAINING-WORK-GROUPS.md`, and `ROADMAP.md`. User approved
       **steps 4-5 only**: data/auth guardrails for D4 slots. Step 6 scratch
-      rehearsal remains gated for final approval.
+      rehearsal is now approved and tracked above.
 - [x] Implemented and validated guardrails: slot `/output` mounts default to
       `ro` via `OUTPUT_MOUNT_MODE`; D4 modes set `rw` only on the active slot.
       Standby DB checks use their own restored volume, and restore keeps
@@ -14,8 +46,8 @@
       `bash -n scripts/promote.sh`, `./scripts/promote.sh --help`, `--status`,
       `--deploy-standby --check`, slot Compose config variants, `git diff --check`.
       No slot started; routing unchanged; production untouched.
-- [ ] Later, after separate approval: step 6 scratch rehearsal of
-      deploy/smoke/flip/rollback on scratch ports and hostname.
+- [x] Step 6 scratch rehearsal of deploy/smoke/flip/rollback on scratch ports
+      and hostname is done above.
 - [ ] Later, after separate approval: production cutover with explicit go/no-go,
       maintenance window, final snapshot, and user-directed flip/rollback.
 
