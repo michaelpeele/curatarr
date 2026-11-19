@@ -1,5 +1,28 @@
 # Curatarr — Progress
 
+## ✅ Group D / D4 — step 2 edge proxy and flip/rollback (done 2026-11-19)
+
+- [x] Docs-first status set in `PLAN-deployment-operations-hardening.md`, this
+      section, `REMAINING-WORK-GROUPS.md`, and `ROADMAP.md`. User approved **step 2
+      only**: host edge proxy/Caddyfile and a flip/rollback mechanism.
+- [x] Added `docker-compose.edge.yml`, `configs/edge.env.example`,
+      `configs/Caddyfile.template`, and executable `scripts/edge.sh`; added `state/`
+      to `.gitignore`. Caddy uses host networking, terminates TLS for
+      `CURATARR_DOMAIN`, and forwards to the active slot web port. `scripts/edge.sh`
+      provides `status`, `render`, `flip`, `rollback`, `reload`, and `entrypoint`;
+      flip/rollback require `--confirm-cutover` and only change active state plus a
+      Caddy reload.
+- [x] Validated edge files without starting the proxy or changing routing:
+      `bash -n scripts/edge.sh` passed; `docker compose -f docker-compose.edge.yml
+      --env-file configs/edge.env.example config --quiet` passed; `status` reported
+      `active_slot=blue`, `upstream=127.0.0.1:15173`; `render` wrote `state/Caddyfile`
+      with `reverse_proxy 127.0.0.1:15173`. No proxy container started and no active
+      production routing changed.
+- [ ] Later, after separate approval: extend `promote.sh` with status/deploy/smoke/
+      flip/rollback modes. Not part of step 2.
+- [ ] Later, after separate approval: production cutover with explicit go/no-go,
+      maintenance window, final snapshot, and user-directed flip/rollback.
+
 ## ✅ Group D / D4 — step 1 slot template (done 2026-11-19)
 
 - [x] Docs-first status set in `PLAN-deployment-operations-hardening.md`, this

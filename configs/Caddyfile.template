@@ -1,0 +1,14 @@
+{
+	admin {$CADDY_ADMIN}
+__CADDY_EMAIL_LINE__
+}
+
+{$CURATARR_DOMAIN} {
+	encode zstd gzip
+
+	reverse_proxy 127.0.0.1:__UPSTREAM_PORT__ {
+		header_up Host {host}
+		header_up X-Forwarded-Proto {scheme}
+		header_up X-Real-IP {remote_host}
+	}
+}

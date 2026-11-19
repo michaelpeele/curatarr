@@ -37,3 +37,6 @@ toolbar-snap.yml
 .idea/
 .vscode/
 *.user
+
+# D4 edge proxy generated state
+state/
