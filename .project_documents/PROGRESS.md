@@ -1,6 +1,6 @@
 # Curatarr — Progress
 
-## ⏳ V1 release bundle — published-image Compose file (in progress, 2026-11-19)
+## ✅ V1 release bundle — published-image Compose file (done 2026-11-19)
 
 - [x] Docs-first status set in `PLAN-deployment-operations-hardening.md`, this section,
       and `REMAINING-WORK-GROUPS.md`; all-in-one image logged as a future unchecked
@@ -10,13 +10,30 @@
       configuration, and no local `build:` blocks.
 - [x] Documented the released install path in `README.md` and added the release tag
       variable to `.env.example`.
-- [ ] Validate the release Compose file locally and start it against published
-      `1.0.0` images once the `v1.0.0` tag workflow has completed. `docker compose -f
-      docker-compose.release.yml config --quiet` passed and resolved images to
+- [x] Validated the release Compose file with `docker compose -f
+      docker-compose.release.yml config --quiet`; it resolved to
       `ghcr.io/michaelpeele/curatarr-api:1.0.0` and
       `ghcr.io/michaelpeele/curatarr-web:1.0.0`.
-- [ ] Push the `v1.0.0` tag, verify the GitHub Actions run and published tags,
-      record results here, and commit the closeout.
+- [x] Pushed commit `0c28d00 Release: add published-image compose bundle` and the
+      annotated `v1.0.0` tag. The tag triggered workflow run `44449305935`
+      (`https://github.com/michaelpeele/curatarr/actions/runs/44449305935`), which
+      completed successfully at 2026-11-19T03:09:25Z on head SHA
+      `0c28d0066c34be43215f7afb91db82e16c1af6c4`.
+- [x] Verified published tags with `docker buildx imagetools inspect`: API and web
+      `:1.0.0`, `:1.0`, `:latest`, and `:sha-0c28d00` resolve to the same index
+      digests. `:1.0.0` exposes `linux/amd64` and `linux/arm64` for both images.
+      API digest `sha256:1ee25c0f6aa5d0b6a00062fd52b9b7980c68fac8ad979946bf7c9ff2c7a7397a`;
+      web digest `sha256:45d313b5c2a7d4486624811cf94eb73caa9291fb5c4308065bbdb0c702f7a29c`.
+- [x] Pulled both `1.0.0` images and started a scratch copy of the release Compose
+      file with project `curatarr-release-check`, a unique data volume, and port
+      15003 (production stack and `curatarr-data` volume untouched). API became
+      healthy and `/api/bootstrapped` returned `{"isBootstrapped":false}` on the
+      fresh DB. Web served `assets/index-UEE7VSba.js` and
+      `assets/index-fENfh4zq.css`; the first-boot wizard loaded with zero browser
+      console errors. Scratch containers, network, volume, and files were removed.
+- [x] No application code changed after the prior promotion, so no rebuild, sandbox
+      rerun, or prod promotion was needed. D2, D4, and Multiselect Bug #6 were not
+      started; only the future all-in-one image item remains unchecked.
 
 ## ✅ Group D / D3 — registry and multi-arch CI (done 2026-11-19)
 

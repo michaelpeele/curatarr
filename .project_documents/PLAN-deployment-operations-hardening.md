@@ -1,6 +1,6 @@
 # Plan — Deployment and operations hardening (Group D)
 
-**Status: APPROVED SEQUENCE (2026-11-19); V1 release bundle IN PROGRESS.** D0 is COMPLETE: the source is published at `https://github.com/michaelpeele/curatarr` (initial commit `8cc8cd3 Initial import of Curatarr`, `main` pushed and tracking `origin/main`). D1 (local ops basics) is DONE and promoted at 2026-11-19T01:52:03Z. D3 (registry and multi-arch CI) is DONE: commit `d9ad777` added the GHCR workflow, the manual run `44442469640` succeeded, and both image manifests were verified for `linux/amd64` and `linux/arm64`. The V1 release bundle is in progress before D2; after V1 ships, the next Group D step is D2 (TLS/reverse proxy). No app code was changed in D3. The Backup/restore, Docker Hub/GHCR, and ARM+AMD64 CI ROADMAP items were marked done only after their verification; D2 and D4 remain pending. D4 (blue/green) was added after D2 per user approval.
+**Status: APPROVED SEQUENCE (2026-11-19); V1 release bundle DONE (2026-11-19).** D0 is COMPLETE: the source is published at `https://github.com/michaelpeele/curatarr` (initial commit `8cc8cd3 Initial import of Curatarr`, `main` pushed and tracking `origin/main`). D1 (local ops basics) is DONE and promoted at 2026-11-19T01:52:03Z. D3 (registry and multi-arch CI) is DONE: commit `d9ad777` added the GHCR workflow, the manual run `44442469640` succeeded, and both image manifests were verified for `linux/amd64` and `linux/arm64`. The V1 release bundle is DONE: commit `0c28d00` added `docker-compose.release.yml`, the `v1.0.0` tag was pushed, workflow run `44449305935` succeeded, and both GHCR images were verified at `1.0.0`, `1.0`, `latest`, and `sha-0c28d00` for `linux/amd64` and `linux/arm64`. A scratch release-compose stack was verified on port 15003 without touching production. Next Group D step is D2 (TLS/reverse proxy). No application code changed for V1, so no rebuild, sandbox rerun, or prod promotion was needed. The Backup/restore, Docker Hub/GHCR, and ARM+AMD64 CI ROADMAP items were marked done only after their verification; D2 and D4 remain pending. D4 (blue/green) was added after D2 per user approval.
 
 ## Scope
 
@@ -169,7 +169,7 @@ D0 created the GitHub remote needed for this. D1 made local image tags explicit.
 - Existing sandbox-first build/promotion behaviour remains intact.
 - ROADMAP items `652` and `653` are marked done only after workflow verification.
 
-### V1 release bundle (post-D3; in progress)
+### V1 release bundle (post-D3; DONE 2026-11-19)
 
 User decision: ship with the two-image recommendation. Do **not** merge API and web into a single image for V1. Instead, add `docker-compose.release.yml` using the published GHCR images so users can install with one file and one command without cloning or building.
 
@@ -182,7 +182,7 @@ Details:
 - Preserve the API configuration used by the source compose: `ASPNETCORE_ENVIRONMENT=Production`, `TMDB__ApiKey`, SMTP settings, `MEDIA_ROOT=/media`, `OUTPUT_ROOT=/output`, and `Frontend__BaseUrl`.
 - Preserve the data/media/output volume layout, with a named `curatarr-data` volume and read-only media mounts.
 - Document the release install path in README and add `CURATARR_RELEASE_TAG` to `.env.example`.
-- Push `v1.0.0`; the workflow will publish `1.0.0`, `1.0`, `sha-<short>`, and `latest`. Verify the Actions run and inspect the published tags before marking this done.
+- Pushed `v1.0.0`; workflow run `44449305935` succeeded and published `1.0.0`, `1.0`, `sha-0c28d00`, and `latest`. Verified both GHCR images with `docker buildx imagetools inspect` (both platforms in each manifest), pulled the `1.0.0` images, and started a scratch release-compose stack on port 15003 with a unique volume. API became healthy, `/api/bootstrapped` returned `{"isBootstrapped":false}` on a fresh DB, web served `index-UEE7VSba.js` / `index-fENfh4zq.css`, and the first-boot wizard loaded with zero console errors. Scratch resources were removed; production was untouched. See `PROGRESS.md` for digests and details.
 
 Future work: log a single all-in-one image as an unchecked ROADMAP item at the end of the current roadmap. It is explicitly not part of V1.
 

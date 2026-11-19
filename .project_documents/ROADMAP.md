@@ -641,9 +641,10 @@
       - **D0 — GitHub source publication:** DONE 2026-11-19 (public repo `https://github.com/michaelpeele/curatarr`, initial commit `8cc8cd3 Initial import of Curatarr`, `main` pushed and tracking `origin/main`). Not a ROADMAP line.
       - **D1 — local ops basics:** DONE 2026-11-19; backup/restore operator runbook at `.project_documents/BACKUP-RESTORE.md`, explicit `curatarr-api:${CURATARR_VERSION:-latest}` / `curatarr-web:${CURATARR_VERSION:-latest}` image tags (`ROADMAP.md:176`), and README/`.env.example`/compose port-name drift cleanup. Sandbox-verified and promoted with unchanged bundles `index-UEE7VSba.js` / `index-fENfh4zq.css`.
       - **D3 — registry / multi-arch CI:** DONE 2026-11-19 — GitHub Actions workflow `d9ad777` published GHCR images via CLI-triggered run `44442469640`; both API and web manifests were verified for `linux/amd64` and `linux/arm64` at `sha-d9ad777`. Semver and `latest` remain reserved for tag/release runs; local promotion is unchanged. Covers Docker Hub / GHCR images (`ROADMAP.md:660`) and ARM + AMD64 multi-arch CI (`ROADMAP.md:661`).
+      - **V1 release bundle:** DONE 2026-11-19 — `docker-compose.release.yml` was added in commit `0c28d00`, tag `v1.0.0` was pushed, and workflow run `44449305935` published and verified `1.0.0`, `1.0`, `latest`, and `sha-0c28d00` for both GHCR images on `linux/amd64` and `linux/arm64`. A scratch release-compose stack was verified on port 15003 without touching production. Local promotion is unchanged; the all-in-one image remains a future unchecked ROADMAP item.
       - **D2 — TLS / reverse proxy:** PENDING — reverse proxy guide with Let's Encrypt (`ROADMAP.md:627`); last of the original Group D items.
       - **D4 — blue/green production with sandbox:** PENDING follow-on after D2 — parameterised stacks, host reverse-proxy switch point, standby smoke/rollback rehearsal. Not a ROADMAP line.
-      See `.project_documents/PLAN-deployment-operations-hardening.md` and `.project_documents/REMAINING-WORK-GROUPS.md`. D0, D1, and D3 were marked done only after verification/promotion; D2 and D4 remain pending.
+      See `.project_documents/PLAN-deployment-operations-hardening.md` and `.project_documents/REMAINING-WORK-GROUPS.md`. D0, D1, D3, and the V1 release bundle were marked done only after verification/promotion; D2 and D4 remain pending.
 
 ## Queued / New Projects
 
