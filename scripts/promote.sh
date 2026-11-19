@@ -12,23 +12,77 @@
 # Optional env: ADMIN_EMAIL, ADMIN_PASSWORD (defaults to the documented local admin).
 set -Eeuo pipefail
 
+usage() {
+  cat <<'EOF'
+Usage: scripts/promote.sh [mode] [options]
+
+Existing promotion modes:
+  (no mode)                  Full: build -> sandbox check -> auto-promote prod.
+  --sandbox-only             Build + sandbox check; stop for manual web testing.
+  --prod-only                Deploy already-verified images after manual checks.
+  --seed                     Full, but reseed the sandbox DB from prod first.
+
+D4 blue/green modes (read-only unless stated):
+  --status                   Show active/standby slots, container health and
+                             the edge proxy upstream. No state is changed.
+  --deploy-standby           Recreate only the standby slot from verified images.
+                             The active slot and proxy routing are unchanged.
+  --smoke-standby            Smoke the standby API/web ports and verify its DB.
+  --flip --confirm-cutover   Verify the refreshed standby, then switch the edge
+                             proxy to it. Requires an operator write freeze and
+                             a final snapshot (BACKUP_DB, optional BACKUP_KEYS_DIR).
+  --rollback --confirm-cutover
+                             Switch the edge proxy back to the previous slot.
+
+Options:
+  --check                    With --deploy-standby only: validate configuration
+                             and report the target without starting containers.
+  --confirm-cutover          Mandatory explicit consent for --flip/--rollback.
+  -h, --help                 Show this help.
+
+D4 env overrides: BLUE_ENV_FILE, GREEN_ENV_FILE, EDGE_ENV_FILE, BACKUP_DB,
+BACKUP_KEYS_DIR. Real slot env files default to configs/slot-<blue|green>.env.
+
+Cutover is a separate, user-approved operation. This script never changes
+production routing without --confirm-cutover.
+EOF
+}
+
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
 MODE=full
 SEED=0
-for arg in "$@"; do
-  case "$arg" in
-    --sandbox-only|--prod-only) MODE="${arg#--}" ;;
+CONFIRM_CUTOVER=0
+CHECK_ONLY=0
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --sandbox-only|--prod-only|--status|--deploy-standby|--smoke-standby|--flip|--rollback)
+      MODE="${1#--}" ;;
     --seed) SEED=1 ;;
+    --confirm-cutover) CONFIRM_CUTOVER=1 ;;
+    --check) CHECK_ONLY=1 ;;
     -h|--help)
-      sed -n '2,12p' "${BASH_SOURCE[0]}"
+      usage
       exit 0 ;;
-    *) echo "Unknown argument: $arg" >&2; exit 2 ;;
+    *) echo "Unknown argument: $1" >&2; exit 2 ;;
   esac
+  shift
 done
 
+if [[ $CHECK_ONLY -eq 1 && "$MODE" != deploy-standby ]]; then
+  echo "--check is only valid with --deploy-standby" >&2
+  exit 2
+fi
+if [[ $CONFIRM_CUTOVER -eq 1 && "$MODE" != flip && "$MODE" != rollback ]]; then
+  echo "--confirm-cutover is only valid with --flip or --rollback" >&2
+  exit 2
+fi
+
 SANDBOX_COMPOSE=docker-compose.sandbox.yml
+SLOT_COMPOSE="$ROOT/docker-compose.slot.yml"
+EDGE_SH="$ROOT/scripts/edge.sh"
+ACTIVE_FILE="$ROOT/state/active-slot"
 LOG_FILE="$ROOT/logs/promotions.log"
 mkdir -p "$(dirname "$LOG_FILE")"
 
@@ -40,6 +94,8 @@ on_error() {
   exit "$rc"
 }
 trap 'on_error $LINENO' ERR
+
+fail() { log "ERROR: $*"; echo "$*" >&2; return 1; }
 
 wait_ready() { # wait_ready <url> <label>
   local url="$1" label="$2" code=""
@@ -105,6 +161,229 @@ promote_prod() {
   log "Prod deployment and smoke checks PASSED. Hard-refresh the browser to pick up the new web bundle."
 }
 
+# ─── D4 blue/green helpers ────────────────────────────────────────────────────
+
+slot_env_file() { # slot_env_file <blue|green>
+  local slot="$1" override=""
+  case "$slot" in
+    blue) override="${BLUE_ENV_FILE:-}" ;;
+    green) override="${GREEN_ENV_FILE:-}" ;;
+    *) return 1 ;;
+  esac
+  if [[ -n "$override" ]]; then
+    echo "$override"
+  elif [[ -f "$ROOT/configs/slot-$slot.env" ]]; then
+    echo "$ROOT/configs/slot-$slot.env"
+  else
+    echo "$ROOT/configs/slot-$slot.env.example"
+  fi
+}
+
+d4_active_slot() {
+  local slot
+  [[ -f "$EDGE_SH" ]] || fail "missing $EDGE_SH"
+  slot=$("$EDGE_SH" status | sed -n 's/^active_slot=//p')
+  case "$slot" in
+    blue|green) echo "$slot" ;;
+    *) fail "could not read active slot from '$EDGE_SH status'" ;;
+  esac
+}
+
+d4_standby_slot() {
+  case "$1" in
+    blue) echo green ;;
+    green) echo blue ;;
+    *) return 1 ;;
+  esac
+}
+
+edge_env_file() {
+  if [[ -n "${EDGE_ENV_FILE:-}" && -f "${EDGE_ENV_FILE:-}" ]]; then
+    echo "$EDGE_ENV_FILE"
+  elif [[ -f "$ROOT/configs/edge.env" ]]; then
+    echo "$ROOT/configs/edge.env"
+  else
+    echo "$ROOT/configs/edge.env.example"
+  fi
+}
+
+edge_domain() {
+  local env_file domain
+  env_file=$(edge_env_file)
+  domain=$(
+    set -a
+    # shellcheck disable=SC1090
+    . "$env_file"
+    printf '%s' "${CURATARR_DOMAIN:-}"
+  )
+  [[ -n "$domain" ]] || fail "CURATARR_DOMAIN is not set in $env_file"
+  echo "$domain"
+}
+
+require_confirm_cutover() {
+  [[ $CONFIRM_CUTOVER -eq 1 ]] || \
+    fail "$1 requires --confirm-cutover; production routing was not changed"
+}
+
+PY_DB_COUNTS='
+import sqlite3, sys
+c = sqlite3.connect("file:" + sys.argv[1] + "?mode=ro", uri=True)
+print("integrity_check=" + str(c.execute("PRAGMA integrity_check").fetchone()[0]))
+for t in ("AspNetUsers", "VirtualLibraries", "SourceItems"):
+    print(t + "=" + str(c.execute("SELECT COUNT(*) FROM " + t).fetchone()[0]))
+'
+
+verify_slot_db() { # verify_slot_db <slot> [backup-db]
+  local slot="$1" backup_db="${2:-}" vol="curatarr-${slot}-data" live backup
+  log "Verifying DB for slot $slot (volume $vol)..."
+  live=$(docker run --rm -v "$vol:/data" python:3.11-slim \
+    python3 -c "$PY_DB_COUNTS" /data/curatarr.db) || fail "DB check failed for slot $slot"
+  echo "$live"
+  if [[ -n "$backup_db" ]]; then
+    [[ -f "$backup_db" ]] || fail "backup DB not found: $backup_db"
+    backup=$(docker run --rm -v "$backup_db:/backup/curatarr.db:ro" python:3.11-slim \
+      python3 -c "$PY_DB_COUNTS" /backup/curatarr.db) || fail "backup DB check failed: $backup_db"
+    echo "backup: $backup"
+    [[ "$live" == "$backup" ]] || fail "slot $slot row counts differ from $backup_db"
+  fi
+  log "DB verification PASSED for slot $slot."
+}
+
+slot_api_port() { # slot_api_port <env-file>
+  sed -n 's/^API_LOCAL_PORT=//p' "$1" | tail -n 1
+}
+
+slot_web_port() { # slot_web_port <env-file>
+  sed -n 's/^WEB_LOCAL_PORT=//p' "$1" | tail -n 1
+}
+
+d4_status() {
+  local active standby slot env_file
+  active=$(d4_active_slot)
+  standby=$(d4_standby_slot "$active")
+  log "active_slot=$active standby_slot=$standby"
+  echo "active_slot=$active"
+  echo "standby_slot=$standby"
+  if command -v docker >/dev/null 2>&1; then
+    for slot in "$active" "$standby"; do
+      env_file=$(slot_env_file "$slot")
+      log "slot=$slot env_file=$env_file"
+      echo "--- slot $slot (env: $env_file) ---"
+      docker compose -f "$SLOT_COMPOSE" --env-file "$env_file" ps 2>&1 || true
+    done
+  else
+    log "docker CLI unavailable; skipped container health"
+  fi
+  echo "--- edge proxy ---"
+  "$EDGE_SH" status || true
+  log "STATUS complete: active_slot=$active standby_slot=$standby"
+}
+
+d4_deploy_standby() {
+  local active standby env_file
+  active=$(d4_active_slot)
+  standby=$(d4_standby_slot "$active")
+  env_file=$(slot_env_file "$standby")
+  log "active_slot=$active standby_slot=$standby env_file=$env_file"
+  [[ "$env_file" == *.example ]] && \
+    { [[ $CHECK_ONLY -eq 1 ]] || fail "create $ROOT/configs/slot-$standby.env before deploying"; }
+  docker compose -f "$SLOT_COMPOSE" --env-file "$env_file" config --quiet || \
+    fail "standby slot compose config is invalid ($env_file)"
+  if [[ $CHECK_ONLY -eq 1 ]]; then
+    log "deploy-check OK: active_slot=$active standby_slot=$standby (no containers started)"
+    echo "deploy-check OK: active=$active standby=$standby"
+    return 0
+  fi
+  log "Recreating standby slot $standby from verified images..."
+  docker compose -f "$SLOT_COMPOSE" --env-file "$env_file" \
+    up -d --force-recreate --no-build api web
+  log "DEPLOY-STANDBY complete: active_slot=$active standby_slot=$standby (routing unchanged)"
+}
+
+d4_smoke_standby() {
+  local active standby env_file api_port web_port
+  active=$(d4_active_slot)
+  standby=$(d4_standby_slot "$active")
+  env_file=$(slot_env_file "$standby")
+  [[ -f "$env_file" ]] || fail "missing env file for standby slot $standby: $env_file"
+  api_port=$(slot_api_port "$env_file")
+  web_port=$(slot_web_port "$env_file")
+  [[ -n "$api_port" && -n "$web_port" ]] || fail "API_LOCAL_PORT/WEB_LOCAL_PORT missing in $env_file"
+  log "active_slot=$active standby_slot=$standby api_port=$api_port web_port=$web_port"
+  wait_ready "http://127.0.0.1:$web_port" "standby web $standby"
+  smoke "http://127.0.0.1:$api_port" "standby API $standby"
+  verify_slot_db "$standby"
+  log "SMOKE-STANDBY complete: active_slot=$active standby_slot=$standby"
+}
+
+restore_slot_db() { # restore_slot_db <slot> <backup-db> [backup-keys-dir]
+  local slot="$1" backup_db="$2" keys_dir="${3:-}" vol="curatarr-${slot}-data"
+  [[ -f "$backup_db" ]] || fail "backup DB not found: $backup_db"
+  log "Restoring final snapshot into standby slot $slot (volume $vol)..."
+  docker run --rm -v "$vol:/data" -v "$backup_db:/backup/curatarr.db:ro" python:3.11-slim sh -c \
+    "cp /backup/curatarr.db /data/curatarr.db && \
+     rm -f /data/curatarr.db-wal /data/curatarr.db-shm && \
+     chown -R 1654:1654 /data"
+  if [[ -n "$keys_dir" ]]; then
+    [[ -d "$keys_dir" ]] || fail "data-protection-keys directory not found: $keys_dir"
+    docker run --rm -v "$vol:/data" -v "$keys_dir:/keys:ro" python:3.11-slim sh -c \
+      "mkdir -p /data/data-protection-keys && cp -a /keys/. /data/data-protection-keys/ && \
+       chown -R 1654:1654 /data"
+  fi
+  verify_slot_db "$slot" "$backup_db"
+}
+
+smoke_public_url() { # smoke_public_url <domain>
+  local domain="$1" jar code
+  jar=$(mktemp)
+  trap 'rm -f "${jar:-}"' RETURN
+  code=$(curl -sk -o /dev/null -w '%{http_code}' -c "$jar" \
+    -H 'Content-Type: application/json' \
+    -d "{\"email\":\"${ADMIN_EMAIL:-michael.peele@gmail.com}\",\"password\":\"${ADMIN_PASSWORD:-Passw0rd!123}\"}" \
+    "https://$domain/api/auth/login")
+  [[ "$code" == "200" ]] || fail "public URL login failed (HTTP $code)"
+  for path in /api/source-items /api/virtual-libraries /api/me; do
+    code=$(curl -sk -o /dev/null -w '%{http_code}' -b "$jar" "https://$domain$path")
+    [[ "$code" == "200" ]] || fail "public URL smoke $path failed (HTTP $code)"
+  done
+  log "public URL smoke PASSED for https://$domain"
+}
+
+d4_flip() {
+  require_confirm_cutover flip
+  local active standby env_file domain backup_db keys_dir
+  active=$(d4_active_slot)
+  standby=$(d4_standby_slot "$active")
+  env_file=$(slot_env_file "$standby")
+  [[ "$env_file" == *.example ]] && fail "create $ROOT/configs/slot-$standby.env before flipping"
+  backup_db="${BACKUP_DB:-}"
+  [[ -n "$backup_db" && -f "$backup_db" ]] || \
+    fail "BACKUP_DB must point to the final verified snapshot"
+  keys_dir="${BACKUP_KEYS_DIR:-}"
+  domain=$(edge_domain)
+  log "active_slot=$active standby_slot=$standby target_slot=$standby"
+  log "Precondition: operator must hold a write freeze and have go/no-go approval."
+  docker compose -f "$SLOT_COMPOSE" --env-file "$env_file" stop api || true
+  restore_slot_db "$standby" "$backup_db" "$keys_dir"
+  docker compose -f "$SLOT_COMPOSE" --env-file "$env_file" up -d --no-build api web
+  d4_smoke_standby
+  "$EDGE_SH" flip "$standby" --confirm-cutover || fail "edge flip failed"
+  smoke_public_url "$domain"
+  log "FLIP complete: active_slot=$standby (was $active)."
+}
+
+d4_rollback() {
+  require_confirm_cutover rollback
+  local active target domain
+  active=$(d4_active_slot)
+  target=$(d4_standby_slot "$active")
+  domain=$(edge_domain)
+  log "active_slot=$active rollback_target=$target"
+  "$EDGE_SH" rollback --confirm-cutover || fail "edge rollback failed"
+  smoke_public_url "$domain"
+  log "ROLLBACK complete: active_slot=$target (was $active)."
+}
+
 case "$MODE" in
   full)
     build_images
@@ -121,5 +400,20 @@ case "$MODE" in
     log "Deploying already-verified images (no build, no sandbox tests)."
     promote_prod
     log "DONE — prod-only."
+    ;;
+  status)
+    d4_status
+    ;;
+  deploy-standby)
+    d4_deploy_standby
+    ;;
+  smoke-standby)
+    d4_smoke_standby
+    ;;
+  flip)
+    d4_flip
+    ;;
+  rollback)
+    d4_rollback
     ;;
 esac

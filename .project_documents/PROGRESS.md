@@ -1,5 +1,20 @@
 # Curatarr — Progress
 
+## ✅ Group D / D4 — step 3 promote modes (done 2026-11-19)
+
+- [x] Docs-first status set in `PLAN-deployment-operations-hardening.md`, this
+      section, `REMAINING-WORK-GROUPS.md`, and `ROADMAP.md`. User approved **step 3
+      only**: extend `promote.sh` with status/deploy/smoke/flip/rollback modes.
+- [x] Added D4 modes to `scripts/promote.sh` while preserving full, sandbox-only,
+      prod-only, and seed behavior. New modes log to `logs/promotions.log`; flip
+      and rollback require `--confirm-cutover`, and no production cutover was
+      performed.
+- [x] Validated with `bash -n scripts/promote.sh`, `./scripts/promote.sh --help`,
+      `--status`, and `--deploy-standby --check` only; no slots were started,
+      routing was unchanged, and production was not touched.
+- [ ] Later, after separate approval: production cutover with explicit go/no-go,
+      maintenance window, final snapshot, and user-directed flip/rollback.
+
 ## ✅ Group D / D4 — step 2 edge proxy and flip/rollback (done 2026-11-19)
 
 - [x] Docs-first status set in `PLAN-deployment-operations-hardening.md`, this
