@@ -7,9 +7,9 @@ Order follows `/home/michaelpeele/ai-projects/workflow.md` where a mandated batc
 ## Closed duplicates / stale references
 
 - `ROADMAP.md:188` **Activity / logs view** — checked off `[x]` as a duplicate of Sprint 5 #1 (Activity) and #2 (Logs), both done and promoted 2026-11-18. Treated as completed; do not schedule.
-- `ROADMAP.md:181` **Calendar view** — checked off `[x]` as a duplicate of Sprint 4 #2 "Calendar from metadata" (`ROADMAP.md:363`), both slices done and promoted 2026-11-18. The pre-implementation spec is retained for reference only.
+- `ROADMAP.md:181` **Calendar view** — checked off `[x]` as a duplicate of Sprint 4 #2 "Calendar from metadata" (`ROADMAP.md:373`), both slices done and promoted 2026-11-18. The pre-implementation spec is retained for reference only.
 - `ROADMAP.md:184` **TMDB metadata enrichment polish** was closed in docs on 2026-11-19. Posters, genres, ratings, studios/networks, people fields, and raw TMDB staging are already shipped; the only missing piece was backdrops, and the user confirmed those are not needed.
-- `ROADMAP.md:173` **Docker image & container cleanup / consolidation** is partly done for sandbox (`curatarr-api:latest` / `curatarr-web:latest`), but prod still uses `build:` in `docker-compose.yml`. Treat the explicit-tag / single-container cleanup as remaining (Group D).
+- `ROADMAP.md:176` **Docker image & container cleanup / consolidation** is partly done for sandbox (`curatarr-api:latest` / `curatarr-web:latest`), but prod still uses `build:` in `docker-compose.yml`. Treat the explicit-tag / single-container cleanup as remaining (Group D).
 - `ROADMAP.md:162` **Show-level metadata** was closed in docs on 2026-11-19. Calendar slice 1 already added the explicit `SourceItem` date columns backfilled from cached `TmdbRawDetails.Json`; the next-episode goal is delivered, and episode drill-down / per-show endpoint / last-updated field were retired. See `.project_documents/PLAN-metadata-show-enrichment.md`.
 
 The two earlier short-term duplicates and the two Group C items are now checked off; the ROADMAP has 16 genuinely open items.
@@ -19,8 +19,8 @@ The two earlier short-term duplicates and the two Group C items are now checked 
 ### Group A — Calendar + date metadata (mandated batch #6; DONE)
 
 Items:
-- `ROADMAP.md:363` Sprint 4 #2 — **Calendar from metadata** (duplicate short-term placeholder at `:181`).
-- `ROADMAP.md:162` **Show-level metadata** — only the date/last-updated portion needed by Calendar (done); remainder stays in Group C.
+- `ROADMAP.md:373` Sprint 4 #2 — **Calendar from metadata** (duplicate short-term placeholder at `:181`).
+- `ROADMAP.md:162` **Show-level metadata** — closed 2026-11-19; Calendar slice 1 delivered the needed air-date data and the remainder was retired (no per-show endpoint, last-updated field, or episode drill-down).
 
 Why grouped: Calendar needs a reliable date source; `SourceItem` currently has `Year` but no release/air date fields (`Curatarr.Engine/Data/Models.cs:39-102`). The UI placeholder existed in `App.tsx`, and the per-library Mark/Hide behaviour it reuses is complete.
 
@@ -67,12 +67,12 @@ Analysis doc: `.project_documents/PLAN-metadata-show-enrichment.md` (status **AP
 
 Items:
 - `ROADMAP.md:627` **TLS support**.
-- `ROADMAP.md:173` **Docker image & container cleanup / consolidation**.
-- `ROADMAP.md:632` **Backup/restore**.
-- `ROADMAP.md:646` **Docker Hub / GHCR images**.
-- `ROADMAP.md:647` **ARM + AMD64 multi-arch CI**.
-- Related one-time task: **D0 — publish source to GitHub** (not a ROADMAP line; prerequisite for later CI).
-- Related follow-on task: **D4 — blue/green production with sandbox** (new; approved after D2).
+- `ROADMAP.md:176` **Docker image & container cleanup / consolidation**.
+- `ROADMAP.md:632` **Backup/restore** — also the Group D tracker bullet in `ROADMAP.md`.
+- `ROADMAP.md:652` **Docker Hub / GHCR images**.
+- `ROADMAP.md:653` **ARM + AMD64 multi-arch CI**.
+- Related one-time task: **D0 — publish source to GitHub** — COMPLETE 2026-11-19 (`https://github.com/michaelpeele/curatarr`, commit `8cc8cd3`); not a ROADMAP line.
+- Related follow-on task: **D4 — blue/green production with sandbox** (new; approved after D2; not a ROADMAP line).
 
 Why grouped: same release/deployment surface; mostly docs and compose/CI changes, no product UI.
 
@@ -81,31 +81,31 @@ Analysis doc: `.project_documents/PLAN-deployment-operations-hardening.md` (stat
 ### Group E — Scale and security plumbing
 
 Items:
-- `ROADMAP.md:617` **Multi-root scanning**.
-- `ROADMAP.md:633` **PostgreSQL backend**.
-- `ROADMAP.md:637` **API token auth**.
+- `ROADMAP.md:628` **Multi-root scanning**.
+- `ROADMAP.md:644` **PostgreSQL backend**.
+- `ROADMAP.md:648` **API token auth**.
 
 Why grouped: backend/data-path work with broader integration impact. Treat each as its own batch; do not combine API token auth with DB provider changes.
 
 ### Group F — Watch state and external automation
 
 Items:
-- `ROADMAP.md:618` **Watch state tracking**.
-- `ROADMAP.md:632` **Plex/Jellyfin integration**.
-- `ROADMAP.md:634` **Webhooks**.
-- `ROADMAP.md:191` **Library suggestions**.
+- `ROADMAP.md:629` **Watch state tracking**.
+- `ROADMAP.md:643` **Plex/Jellyfin integration**.
+- `ROADMAP.md:645` **Webhooks**.
+- `ROADMAP.md:201` **Library suggestions**.
 
 Why grouped: watch state is the shared data model; integration/automation features consume it. Suggested order: watch state → Plex/Jellyfin → webhooks → suggestions.
 
 ### Group G — Onboarding and standalone long-term projects
 
 Items:
-- `ROADMAP.md:619` **User onboarding polish**.
-- `ROADMAP.md:625` **MetaDatarr**.
-- `ROADMAP.md:638` **i18n (non-English UI)**.
+- `ROADMAP.md:630` **User onboarding polish**.
+- `ROADMAP.md:642` **MetaDatarr**.
+- `ROADMAP.md:655` **i18n (non-English UI)**.
 
 Why grouped only for visibility: these are independent; each needs its own planning doc. MetaDatarr is a new project, not a Curatarr sprint item.
 
 ## First item / next item
 
-All six mandated batches from `workflow.md` are complete, including batch #6 (Calendar). Group B and its follow-up are done and promoted; Group C was closed in docs only because Calendar already delivers the next-episode goal and backdrops are not needed. The next natural group is **Group D — Deployment and operations hardening**, with the approved order D0 GitHub source publication → D1 local ops basics → D3 registry/multi-arch CI → D2 TLS/reverse proxy → D4 blue/green production with sandbox. See `.project_documents/PLAN-deployment-operations-hardening.md`. Analysis docs for completed groups B and C are `.project_documents/PLAN-library-grid-ui-polish.md` and `.project_documents/PLAN-metadata-show-enrichment.md`. The old first-item prompt in `.project_documents/PROMPT-first-remaining-item.md` is historical only.
+All six mandated batches from `workflow.md` are complete, including batch #6 (Calendar). Group B and its follow-up are done and promoted; Group C was closed in docs only because Calendar already delivers the next-episode goal and backdrops are not needed. The next natural group is **Group D — Deployment and operations hardening**, with the approved order D0 GitHub source publication (COMPLETE 2026-11-19) → D1 local ops basics (NEXT) → D3 registry/multi-arch CI → D2 TLS/reverse proxy → D4 blue/green production with sandbox. See `.project_documents/PLAN-deployment-operations-hardening.md`. Analysis docs for completed groups B and C are `.project_documents/PLAN-library-grid-ui-polish.md` and `.project_documents/PLAN-metadata-show-enrichment.md`. The old first-item prompt in `.project_documents/PROMPT-first-remaining-item.md` is historical only.

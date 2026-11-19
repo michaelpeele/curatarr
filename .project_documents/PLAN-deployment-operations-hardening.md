@@ -1,16 +1,16 @@
 # Plan — Deployment and operations hardening (Group D)
 
-**Status: APPROVED SEQUENCE (2026-11-19).** D0 is the next approved step and its pre-commit cleanup is in progress. No commit has been pushed, no app code has been changed, and no `ROADMAP.md` item has been marked done. D4 (blue/green) was added after D2 per user approval.
+**Status: APPROVED SEQUENCE (2026-11-19).** D0 is COMPLETE: the source is published at `https://github.com/michaelpeele/curatarr` (initial commit `8cc8cd3 Initial import of Curatarr`, `main` pushed and tracking `origin/main`). Next step is D1. No app code has been changed and no `ROADMAP.md` item has been marked done. D4 (blue/green) was added after D2 per user approval.
 
 ## Scope
 
 This analysis covers Group D from `.project_documents/REMAINING-WORK-GROUPS.md`. The roadmap items are:
 
 1. `ROADMAP.md:627` — **TLS support** (reverse proxy + Let's Encrypt guide).
-2. `ROADMAP.md:173` — **Docker image & container cleanup / consolidation** (explicit prod tags; single-container option).
+2. `ROADMAP.md:176` — **Docker image & container cleanup / consolidation** (explicit prod tags; single-container option).
 3. `ROADMAP.md:632` — **Backup/restore** (SQLite dump/restore docs).
-4. `ROADMAP.md:646` — **Docker Hub / GHCR images**.
-5. `ROADMAP.md:647` — **ARM + AMD64 multi-arch CI**.
+4. `ROADMAP.md:652` — **Docker Hub / GHCR images**.
+5. `ROADMAP.md:653` — **ARM + AMD64 multi-arch CI**.
 
 There is also one related one-time task requested by the user: **D0 — publish the source code to GitHub**. This is not a `ROADMAP.md` line and is not the same as D3 image publishing; it is the prerequisite for any future GitHub Actions/CI work.
 
@@ -41,22 +41,23 @@ Promotion runbooks already use a high-value manual gate: online SQLite backup (`
 
 **Do not implement all items as one batch.** They have different risk profiles and prerequisites. The approved order is **D0 → D1 → D3 → D2 → D4**. D2 remains the last of the original Group D items; D4 follows it because blue/green depends on the reverse-proxy/TLS routing work.
 
-### Sub-batch D0 (next) — publish source to GitHub
+### Sub-batch D0 (COMPLETE 2026-11-19) — publish source to GitHub
 
-Include:
+Completed:
 
-- Confirm the workspace is not yet a Git repository, then initialise Git safely.
-- Review `.gitignore` and exclude `.env`, secrets, Tailscale state, local data, logs, and editor/OS noise before the first commit.
-- Make the initial commit, add the user's GitHub remote, and push the source.
-- Document the repository URL and basic push/PR workflow in project docs.
+- Repo published publicly at `https://github.com/michaelpeele/curatarr`.
+- Initial commit `8cc8cd3 Initial import of Curatarr`; `main` pushed and tracking `origin/main`.
+- GitHub CLI v2.105.0 installed at `/home/michaelpeele/.local/bin/gh`; user authenticated as `michaelpeele`; `gh auth setup-git` configured Git credential integration.
+- Pre-commit cleanup excluded `.env`, secrets, Tailscale state, local data, logs, DBs, generated build files, stale backups, and root duplicate configs. No live secrets or runtime data were published.
+- Functional test scripts were left unchanged per user decision; personal emails in docs were sanitized to generic test addresses.
 
-Why first: the user explicitly asked to publish the source, and a GitHub remote is a prerequisite for any later CI/image publishing. This is repository setup only; it is not D3.
+Why first: the user explicitly asked to publish the source, and a GitHub remote is a prerequisite for any later CI/image publishing. This was repository setup only; it is not D3.
 
 ### Sub-batch D1 — local ops basics
 
 Include:
 
-- Prod compose image tagging cleanup (`ROADMAP.md:173`): stop relying on implicit local `latest` for prod. Use explicit, versioned image names/tags in compose while preserving the shared source tree and the existing promote flow. Keep `curatarr-api:latest` / `curatarr-web:latest` for sandbox unchanged.
+- Prod compose image tagging cleanup (`ROADMAP.md:176`): stop relying on implicit local `latest` for prod. Use explicit, versioned image names/tags in compose while preserving the shared source tree and the existing promote flow. Keep `curatarr-api:latest` / `curatarr-web:latest` for sandbox unchanged.
 - Operator backup/restore guide (`ROADMAP.md:632`): generalise the existing promotion gate into a documented, repeatable procedure, including online backup, WAL handling, verification by restoring to a scratch API on port 15001, and rollback notes.
 - Reconcile README/env/compose port-name drift and add a pointer to the backup guide. This is documentation/config consistency, not a new feature.
 
@@ -66,8 +67,8 @@ Why second: it is low risk, uses procedures already proven in promotions, and im
 
 Include:
 
-- `ROADMAP.md:646` Docker Hub / GHCR images.
-- `ROADMAP.md:647` ARM + AMD64 multi-arch CI.
+- `ROADMAP.md:652` Docker Hub / GHCR images.
+- `ROADMAP.md:653` ARM + AMD64 multi-arch CI.
 
 Why here: D0 supplies the GitHub remote. Image publishing still needs credentials, repository secrets, CI configuration, and a tag/release policy. Do this before TLS when there is a concrete distribution need, but do not fold it into D0 or D1.
 
@@ -107,7 +108,7 @@ Why after D2: blue/green needs the backup discipline from D1 and the reverse-pro
 
 ## Verification plan (mandatory, per `workflow.md`)
 
-D0 is repository setup only: verify the remote, pushed commit, and that no secrets/runtime data are present in the repository. No Docker build or promotion is needed for D0.
+D0 was repository setup only and is complete: the remote, pushed commit, and exclusion of secrets/runtime data were verified. No Docker build or promotion was needed for D0.
 
 For D1 and later deployment changes, even docs/compose work must be verified through the sandbox first:
 
@@ -125,10 +126,10 @@ Do not mark ROADMAP items done until after verification and promotion. Documenta
 
 ## Decisions recorded
 
-1. Add **D0 — publish source to GitHub** and make it the next step.
+1. **D0 — publish source to GitHub** was added and is COMPLETE; the next step is D1.
 2. Run Group D in this order: **D0 → D1 → D3 → D2 → D4**.
 3. Keep **D2 (TLS / reverse proxy)** as the last of the original Group D items; **D4 (blue/green)** follows it because it depends on the routing/TLS work.
 4. Use a **host reverse proxy** as the blue/green switch point rather than flipping the Tailscale funnel port.
 5. Treat blue/green as a separate D4 sub-batch, not part of D0–D3.
 
-No further approval is needed for D0. Its pre-commit cleanup is in progress; no commit or push has been made.
+D0 is complete and published; no further action is needed for it. Implementation of D1 has not started.

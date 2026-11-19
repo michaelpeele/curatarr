@@ -629,7 +629,13 @@
 - [ ] **Watch state tracking** — record which items are watched/ignored per library
 - [ ] **User onboarding polish** — email templates (SMTP sender done 2026-11-14:
       `SmtpEmailSender` + `Smtp__*` env config, Gmail app password, console fallback retained)
-- [ ] **Backup/restore** — documented SQLite dump/restore procedure
+- [ ] **Backup/restore** — documented SQLite dump/restore procedure. **Group D tracker (added 2026-11-19):** this bullet also tracks the remaining deployment/operations work so the approved order is visible in one place:
+      - **D0 — GitHub source publication:** DONE 2026-11-19 (public repo `https://github.com/michaelpeele/curatarr`, initial commit `8cc8cd3 Initial import of Curatarr`, `main` pushed and tracking `origin/main`). Not a ROADMAP line.
+      - **D1 — local ops basics (current next step):** finish this backup/restore guide, explicit `curatarr-api:latest` / `curatarr-web:latest` image tags (`ROADMAP.md:176`), and README/env/compose port-name drift cleanup.
+      - **D3 — registry / multi-arch CI:** Docker Hub / GHCR images (`ROADMAP.md:652`) and ARM + AMD64 multi-arch CI (`ROADMAP.md:653`); requires D0.
+      - **D2 — TLS / reverse proxy:** reverse proxy guide with Let's Encrypt (`ROADMAP.md:627`); last of the original Group D items.
+      - **D4 — blue/green production with sandbox:** new follow-on after D2; parameterised stacks, host reverse-proxy switch point, standby smoke/rollback rehearsal. Not a ROADMAP line.
+      See `.project_documents/PLAN-deployment-operations-hardening.md` and `.project_documents/REMAINING-WORK-GROUPS.md`. Do not mark any of these done until verified/promoted.
 
 ## Queued / New Projects
 

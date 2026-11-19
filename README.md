@@ -31,8 +31,8 @@ Build curated virtual libraries of movies, shows, and anime from your media coll
 
 1. **Clone the repo:**
    ```bash
-   git clone https://github.com/yourusername/Curatarr.git
-   cd Curatarr
+   git clone https://github.com/michaelpeele/curatarr.git
+   cd curatarr
    ```
 
 2. **Create `.env` from template:**
@@ -250,5 +250,5 @@ Contributions welcome! Open an issue or PR on GitHub.
 
 ## Support
 
-- **GitHub Issues:** [github.com/yourusername/Curatarr/issues](https://github.com/yourusername/Curatarr/issues)
+- **GitHub Issues:** [github.com/michaelpeele/curatarr/issues](https://github.com/michaelpeele/curatarr/issues)
 - **Docs:** `.project_documents/` folder (DESIGN.md, TECHNICAL.md, ROADMAP.md)

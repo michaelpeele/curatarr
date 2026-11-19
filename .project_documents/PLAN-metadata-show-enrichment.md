@@ -66,7 +66,7 @@ Posters and genres are already displayed/filterable. Backdrops are not.
 
 1. Close `ROADMAP.md:162` **Show-level metadata** as superseded/completed by Calendar slice 1's date foundation, with a note that episode drill-down and per-show endpoint were retired by user decision.
 2. Re-scope `ROADMAP.md:184` **TMDB metadata enrichment polish** to a separate, optional backlog item whose only remaining candidate is a backdrop field/display; do not implement it as part of Group C.
-3. Move to **Group D — Deployment and operations hardening** next: TLS (`ROADMAP.md:616`), Docker/container cleanup (`ROADMAP.md:173`), backup/restore (`ROADMAP.md:621`), Docker Hub/GHCR (`ROADMAP.md:635`), multi-arch CI (`ROADMAP.md:636`).
+3. Move to **Group D — Deployment and operations hardening** next: TLS (`ROADMAP.md:627`), Docker/container cleanup (`ROADMAP.md:176`), backup/restore (`ROADMAP.md:632`), Docker Hub/GHCR (`ROADMAP.md:652`), multi-arch CI (`ROADMAP.md:653`).
 
 Why this is the recommendation:
 
