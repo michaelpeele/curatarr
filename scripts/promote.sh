@@ -404,6 +404,8 @@ smoke_public_url() { # smoke_public_url <domain-or-url>
   local curl_secure=()
   if [[ "$domain" == http://* || "$domain" == https://* ]]; then
     base="$domain"
+  elif [[ "$domain" == :* ]]; then
+    base="http://localhost$domain"
   else
     base="https://$domain"
   fi

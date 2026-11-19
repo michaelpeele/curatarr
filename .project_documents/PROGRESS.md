@@ -1,5 +1,29 @@
 # Curatarr — Progress
 
+## ✅ Group D / D4 — step 7 production cutover (done 2026-11-19)
+
+- [x] Docs-first status set in `PLAN-deployment-operations-hardening.md`, this
+      section, `REMAINING-WORK-GROUPS.md`, and `ROADMAP.md`. User approved step 7
+      with immediate maintenance window, keep `https://curatarr.tail0307d.ts.net`,
+      final prod snapshot, and automatic flip after standby smoke.
+- [x] Cutover completed and verified. Final prod snapshot in ignored `state/cutover`
+      passed integrity/count checks (`integrity=ok`, users=2, libraries=4,
+      items=82490). Blue/green slots were deployed from that snapshot; standby
+      deploy-check, deploy, and smoke passed with matching DB counts. Tailscale
+      Funnel kept the public hostname `https://curatarr.tail0307d.ts.net` and now
+      proxies `/` to edge `http://172.22.0.1:5180`. Public verification passed:
+      login, `/api/source-items`, `/api/virtual-libraries`, `/api/me`, SignalR
+      negotiate on `/hubs/scan`, `/hubs/activity`, `/hubs/logs`, SPA invite/reset
+      links, active writable, and standby read-only. Automatic flip switched to
+      green (`127.0.0.1:15273`, rw); blue became standby (`127.0.0.1:15173`,
+      ro). `finish` stopped old prod `api`/`web`; public `/api/bootstrapped` and
+      `/` returned HTTP 200.
+- [x] Fixed `scripts/promote.sh smoke_public_url()` to treat leading-colon edge
+      domains as local HTTP bind URLs (`http://localhost:5180`), avoiding invalid
+      `https://:5180` during the post-flip public smoke check.
+- [ ] Rollback remains available only on explicit user instruction. No rollback
+      was performed.
+
 ## ✅ Group D / D4 — step 6 scratch rehearsal (done 2026-11-19)
 
 - [x] Docs-first status set in `PLAN-deployment-operations-hardening.md`, this
@@ -28,9 +52,8 @@
       with `docker compose -f docker-compose.yml up -d --no-build` and verified
       `prod-api=200`, `prod-web=200`. Root cause fixed with
       `name: curatarr-d4-edge`; re-run left prod containers up.
-- [x] No production cutover or prod routing change.
-- [ ] Later, after separate approval: production cutover with explicit go/no-go,
-      maintenance window, final snapshot, and user-directed flip/rollback.
+- [x] Step 6 itself made no production cutover or prod routing change.
+- [x] Step 7 production cutover is approved and in progress above.
 
 ## ✅ Group D / D4 — steps 4-5 data/auth guardrails (done 2026-11-19)
 
