@@ -231,8 +231,8 @@ route() {
   wait_url http://127.0.0.1:5180/api/bootstrapped "edge :5180"
   docker exec ts-curatarr sh -c \
     'wget -q -O /dev/null http://172.22.0.1:5180/api/bootstrapped'
-  docker exec ts-curatarr tailscale serve --bg --https=443 --yes "$EDGE_TARGET" >/dev/null
-  docker exec ts-curatarr tailscale serve status
+  docker exec ts-curatarr tailscale funnel --bg --https=443 --yes "$EDGE_TARGET" >/dev/null
+  docker exec ts-curatarr tailscale funnel status
   wait_url "$PUBLIC_URL/api/bootstrapped" "public URL"
   echo "Tailscale route now targets $EDGE_TARGET; public hostname unchanged."
 }
@@ -307,13 +307,13 @@ status() {
 
 abort() {
   prepare
-  docker exec ts-curatarr tailscale serve --bg --https=443 --yes "$OLD_TARGET" >/dev/null
+  docker exec ts-curatarr tailscale funnel --bg --https=443 --yes "$OLD_TARGET" >/dev/null
   docker compose -f "$EDGE_COMPOSE" --env-file "$EDGE_ENV" down -v --remove-orphans || true
   docker compose -f "$SLOT_COMPOSE" --env-file "$GREEN_ENV" down -v --remove-orphans || true
   docker compose -f "$SLOT_COMPOSE" --env-file "$BLUE_ENV" down -v --remove-orphans || true
   docker compose start api web >/dev/null
   wait_url "$PUBLIC_URL/api/bootstrapped" "old prod stack"
-  docker exec ts-curatarr tailscale serve status
+  docker exec ts-curatarr tailscale funnel status
   echo "Aborted: old prod stack restored."
 }
 
