@@ -1263,7 +1263,7 @@
 - [ ] Add isBootstrapped/bootstrap tests to test-api.sh
 - [ ] Test member invite flow
 - [ ] Test scan pipeline UI
-- [ ] Verify tailscale serve configuration
+- [x] Verify tailscale serve configuration (2026-11-19; evidence in “Tailscale standby gate — manual verification (2026-11-19)”)
 - [x] Approve advertised service host for Tailscale Service `curatarr-standby` in the admin console (2026-11-19)
 
 ## Tailscale standby gate — manual verification (2026-11-19)
