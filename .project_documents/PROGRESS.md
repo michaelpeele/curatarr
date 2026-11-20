@@ -1280,6 +1280,15 @@
 - Write guards pass: active green allows `/output` write; standby blue blocks `/output` write.
 - No `TS_AUTHKEY` was created or exposed.
 
+### Recovery note (if Funnel/primary breaks after restart or blue/green swap)
+- Symptoms: external (non-Tailscale) cannot load `https://curatarr.tail0307d.ts.net`, or `tailscale funnel/serve status` shows primary tailnet-only.
+- On host (run in repo/root context):
+  - `docker exec ts-curatarr tailscale serve --https=443 http://172.22.0.1:5180`
+  - `docker exec ts-curatarr tailscale funnel --bg --https=443 --yes http://172.22.0.1:5180`
+  - then `docker exec ts-curatarr tailscale funnel status` and `docker exec ts-curatarr tailscale serve status`
+- If CLI reports “Funnel enabled but node not allowed by tailnet policy”, open the provided URL (e.g. `https://login.tailscale.com/f/funnel?node=...`) and approve/enable Funnel for the `curatarr` node in Tailscale admin console, then re-run the funnel command above.
+- Also ensure edge/Caddy is up and listening on host `:5180` (D4/cutover: `curatarr-edge`, active upstream per `scripts/edge.sh status` / `state/cutover`). After any `ts-curatarr` restart, re-check standby bridge/listeners and reapply standby serve if needed (`./scripts/tailscale-standby.sh apply`, verify).
+
 ## 🐛 Known Issues
 
 ### Resolved
